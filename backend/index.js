@@ -69,7 +69,7 @@ async function getGeminiBalances() {
 }
 
 /* =========================
-   COINBASE FETCH (ECDSA)
+   COINBASE FETCH (FIXED)
 ========================= */
 async function getCoinbaseAccounts() {
   try {
@@ -95,7 +95,14 @@ async function getCoinbaseAccounts() {
       }
     });
 
-    const data = await res.json();
+    const text = await res.text();
+
+    // 🔥 FIX: handle non-JSON (Unauthorized)
+    if (!text.startsWith("{")) {
+      return { error: text };
+    }
+
+    const data = JSON.parse(text);
 
     if (!data.accounts) return { error: data };
 
@@ -112,13 +119,29 @@ async function getCoinbaseAccounts() {
 }
 
 /* =========================
-   PRICE FETCH
+   PRICE FETCH (FIXED)
 ========================= */
 async function getPrices() {
-  const res = await fetch(
-    "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,ripple&vs_currencies=usd"
-  );
-  return res.json();
+  try {
+    const res = await fetch(
+      "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,ripple&vs_currencies=usd"
+    );
+
+    const text = await res.text();
+
+    if (!text.startsWith("{")) {
+      return { bitcoin: { usd: 0 }, ethereum: { usd: 0 }, ripple: { usd: 0 } };
+    }
+
+    return JSON.parse(text);
+
+  } catch {
+    return {
+      bitcoin: { usd: 0 },
+      ethereum: { usd: 0 },
+      ripple: { usd: 0 }
+    };
+  }
 }
 
 /* =========================
