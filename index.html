@@ -13,33 +13,76 @@
 <style>
 body {
   margin:0;
-  font-family:-apple-system, BlinkMacSystemFont, sans-serif;
+  font-family:-apple-system;
   background:radial-gradient(circle at top,#0f0f0f,#000);
   color:white;
-  overflow-x:hidden;
   padding-bottom:90px;
 }
 
+/* HEADER */
 h1 {
   text-align:center;
-  font-size:28px;
-  margin:16px 0;
   color:#c084fc;
-  text-shadow:0 0 35px rgba(147,51,234,0.7);
+  text-shadow:0 0 30px #9333ea;
 }
 
+/* MENU BUTTON */
+.menu-btn {
+  position:absolute;
+  top:15px;
+  right:15px;
+  background:rgba(20,20,20,0.7);
+  border:1px solid rgba(147,51,234,0.4);
+  backdrop-filter:blur(10px);
+  border-radius:12px;
+  padding:8px 12px;
+  box-shadow:0 0 10px rgba(147,51,234,0.5);
+}
+
+/* MENU */
+.menu {
+  position:absolute;
+  top:55px;
+  right:15px;
+  width:180px;
+  background:rgba(20,20,20,0.85);
+  backdrop-filter:blur(18px);
+  border-radius:16px;
+  padding:10px;
+  border:1px solid rgba(147,51,234,0.3);
+  box-shadow:0 10px 30px rgba(0,0,0,0.7),
+              0 0 20px rgba(147,51,234,0.4);
+  transform:translateY(-10px);
+  opacity:0;
+  pointer-events:none;
+  transition:.25s ease;
+}
+
+.menu.show {
+  transform:translateY(0);
+  opacity:1;
+  pointer-events:auto;
+}
+
+.menu button {
+  background:none;
+  border:none;
+  color:white;
+  padding:10px;
+  width:100%;
+  text-align:left;
+}
+
+/* CARD */
 .card {
   background:rgba(25,25,25,0.6);
   margin:12px;
   padding:16px;
   border-radius:18px;
   border:1px solid rgba(147,51,234,0.25);
-  backdrop-filter:blur(14px);
-  box-shadow:
-    0 4px 25px rgba(0,0,0,0.5),
-    0 0 20px rgba(147,51,234,0.2);
 }
 
+/* INPUT */
 input {
   width:100%;
   padding:12px;
@@ -50,8 +93,8 @@ input {
   color:white;
 }
 
+/* BUTTON */
 button {
-  width:100%;
   padding:12px;
   border-radius:14px;
   border:none;
@@ -59,41 +102,36 @@ button {
   color:white;
 }
 
-.tabs {
-  position:fixed;
-  bottom:0;
-  width:100%;
-  display:flex;
-  background:rgba(0,0,0,0.9);
-}
-
-.tabs button { flex:1; }
-
 .hidden { display:none; }
-
-#bg { position:fixed; z-index:-1; }
 </style>
 </head>
 
 <body>
 
-<canvas id="bg"></canvas>
-
 <h1>999 Crypto 💀</h1>
+
+<!-- MENU BUTTON -->
+<button class="menu-btn" onclick="toggleMenu()">☰</button>
+
+<!-- MENU -->
+<div id="menu" class="menu">
+  <button onclick="tab('portfolioTab')">💰 Portfolio</button>
+  <button onclick="tab('geminiTab')">💳 Gemini</button>
+  <button onclick="tab('analyticsTab')">📊 Analytics</button>
+  <button onclick="tab('alertsTab')">🔔 Alerts</button>
+  <button onclick="tab('stakingTab')">🏦 Staking</button>
+  <button onclick="tab('aiTab')">🤖 AI</button>
+  <button onclick="tab('liveTab')">📡 Live</button>
+</div>
 
 <!-- PORTFOLIO -->
 <div id="portfolioTab">
 <div class="card">
-
 <input id="coin" placeholder="Coin">
 <input id="amount" placeholder="Amount">
 <input id="price" placeholder="Buy Price">
-
 <button onclick="addTrade()">Add Trade</button>
-
-<!-- 🔔 NOTIFICATION BUTTON (ADDED) -->
 <button onclick="enableNotifications()">Enable Notifications 🔔</button>
-
 </div>
 
 <div id="portfolio"></div>
@@ -101,39 +139,24 @@ button {
 <h3 id="profit"></h3>
 </div>
 
+<!-- GEMINI -->
+<div id="geminiTab" class="hidden">
+<div class="card">
+<h3>💎 Gemini Rewards</h3>
+<div id="geminiStats"></div>
+</div>
+</div>
+
 <!-- ANALYTICS -->
 <div id="analyticsTab" class="hidden">
 <canvas id="chart"></canvas>
 </div>
 
-<!-- REWARDS -->
-<div id="rewardsTab" class="hidden">
-<div class="card">
-<h3>💎 Rewards</h3>
-<div id="rewardsList"></div>
-<p id="rewardTotal"></p>
-<div style="background:#222;height:10px;border-radius:10px;">
-<div id="gasBar" style="background:#9333ea;height:10px;width:0%;border-radius:10px"></div>
-</div>
-</div>
-</div>
-
-<!-- ELITE -->
-<div id="eliteTab" class="hidden">
-<div class="card">
-<div id="platformData"></div>
-<div id="riskData"></div>
-<div id="tradeHistory"></div>
-<div id="taxData"></div>
-<div id="insightData"></div>
-</div>
-</div>
-
 <!-- ALERTS -->
 <div id="alertsTab" class="hidden">
 <div class="card">
-<input id="alertCoin" placeholder="Coin">
-<input id="alertPrice" placeholder="Price">
+<input id="alertCoin">
+<input id="alertPrice">
 <button onclick="addAlert()">Set Alert</button>
 </div>
 </div>
@@ -141,8 +164,8 @@ button {
 <!-- STAKING -->
 <div id="stakingTab" class="hidden">
 <div class="card">
-<input id="stakeCoin" placeholder="Coin">
-<input id="stakeAmount" placeholder="Amount">
+<input id="stakeCoin">
+<input id="stakeAmount">
 <button onclick="addStake()">Add Stake</button>
 </div>
 </div>
@@ -150,7 +173,6 @@ button {
 <!-- AI -->
 <div id="aiTab" class="hidden">
 <div class="card">
-<h3>🤖 AI Insights</h3>
 <div id="aiBox"></div>
 </div>
 </div>
@@ -158,410 +180,136 @@ button {
 <!-- LIVE -->
 <div id="liveTab" class="hidden">
 <div class="card">
-<h3>📡 Live Market</h3>
 <canvas id="liveChart"></canvas>
 </div>
 <div id="livePrices"></div>
 </div>
 
-<!-- NAV -->
-<div class="tabs">
-<button onclick="tab('portfolioTab')">💰</button>
-<button onclick="tab('analyticsTab')">📊</button>
-<button onclick="tab('rewardsTab')">💎</button>
-<button onclick="tab('eliteTab')">🧠</button>
-<button onclick="tab('alertsTab')">🔔</button>
-<button onclick="tab('stakingTab')">🏦</button>
-<button onclick="tab('aiTab')">🤖</button>
-<button onclick="tab('liveTab')">📡</button>
-</div>
-
 <script>
 
-// =====================
-// 🌐 GLOBAL STATE
-// =====================
-let GLOBAL_DATA = {};
-let LIVE_PRICES = {};
-let seenRewards = JSON.parse(localStorage.getItem("seenRewards") || "[]");
-
-// =====================
-// 🔔 NOTIFICATIONS
-// =====================
-async function enableNotifications(){
-  if(!("Notification" in window)){
-    alert("Not supported");
-    return;
-  }
-
-  const permission = await Notification.requestPermission();
-
-  if(permission === "granted"){
-    alert("Notifications ON 🔥");
-  }
+// MENU TOGGLE
+function toggleMenu(){
+  document.getElementById("menu").classList.toggle("show");
 }
 
-function sendNotification(title, body){
-  if(Notification.permission === "granted"){
-    new Notification(title, {
-      body,
-      icon:"/icon-192.png"
-    });
+// CLOSE MENU ON OUTSIDE CLICK
+document.addEventListener("click",(e)=>{
+  if(!e.target.closest(".menu") && !e.target.closest(".menu-btn")){
+    document.getElementById("menu").classList.remove("show");
   }
+});
+
+// TAB
+function tab(id){
+["portfolioTab","geminiTab","analyticsTab","alertsTab","stakingTab","aiTab","liveTab"]
+.forEach(t=>document.getElementById(t).classList.add("hidden"));
+
+document.getElementById(id).classList.remove("hidden");
+document.getElementById("menu").classList.remove("show");
 }
 
-// =====================
-// 📡 LOAD DATA (BACKEND)
-// =====================
+// GLOBAL
+let GLOBAL_DATA={};
+let LIVE_PRICES={};
+
+// LOAD
 async function load(){
-  try{
-    const res = await fetch("/sync");
-    const data = await res.json();
-    GLOBAL_DATA = data;
-
-    renderPortfolio(data);
-    renderRewards(data);
-
-  }catch(e){
-    console.log("sync failed", e);
-  }
+try{
+const r=await fetch("/sync");
+const d=await r.json();
+GLOBAL_DATA=d;
+localStorage.setItem("offlineData",JSON.stringify(d));
+renderPortfolio(d);
+renderGemini(d);
+}catch{
+const d=JSON.parse(localStorage.getItem("offlineData"));
+if(d){
+renderPortfolio(d);
+renderGemini(d);
+}
+}
 }
 
-// =====================
-// 💰 PORTFOLIO
-// =====================
+// PORTFOLIO
 function renderPortfolio(data){
+portfolio.innerHTML="";
+let total=0,profit=0;
 
-  let total = 0;
-  let profit = 0;
+data.trades?.forEach(t=>{
+const p=data.prices[t.coin]||0;
+const val=t.amount*p;
+const cost=t.amount*t.price;
 
-  const container = document.getElementById("portfolio");
-  container.innerHTML = "";
+total+=val;
+profit+=val-cost;
 
-  data.trades?.forEach(t=>{
-    const price = data.prices[t.coin] || 0;
-    const value = t.amount * price;
-    const cost = t.amount * t.price;
+portfolio.innerHTML+=`
+<div class="card">
+<h3>${t.coin}</h3>
+<p>$${val.toFixed(2)}</p>
+<p>${(val-cost).toFixed(2)}</p>
+</div>`;
+});
 
-    total += value;
-    profit += value - cost;
-
-    container.innerHTML += `
-    <div class="card">
-      <h3>${t.coin}</h3>
-      <p>$${value.toFixed(2)}</p>
-      <p>${(value-cost).toFixed(2)}</p>
-    </div>`;
-  });
-
-  document.getElementById("total").innerText = "Total: $" + total.toFixed(2);
-  document.getElementById("profit").innerText = "Profit: $" + profit.toFixed(2);
+document.getElementById("total").innerText="$"+total.toFixed(2);
+document.getElementById("profit").innerText="$"+profit.toFixed(2);
 }
 
-// =====================
-// 💎 REWARDS
-// =====================
-function renderRewards(data){
+// GEMINI
+function renderGemini(data){
+let rewards=0;
 
-  if(!document.getElementById("rewardsList")) return;
+data.transactions?.forEach(tx=>{
+if(tx.currency==="XRP" && tx.type==="Credit"){
+rewards+=parseFloat(tx.amount||0);
+}
+});
 
-  let total = 0;
-  let html = "";
-
-  data.rewards?.forEach(r=>{
-    total += r.amount;
-    html += `<p>${r.coin}: ${r.amount}</p>`;
-  });
-
-  // AUTO XRP DETECTION
-  data.transactions?.forEach(tx=>{
-    if(tx.currency==="XRP" && tx.type==="Credit"){
-
-      const id = tx.txid || tx.timestamp || tx.amount;
-
-      if(!seenRewards.includes(id)){
-        seenRewards.push(id);
-        localStorage.setItem("seenRewards", JSON.stringify(seenRewards));
-
-        sendNotification("💎 XRP Reward", `+${tx.amount} XRP`);
-      }
-
-      total += parseFloat(tx.amount || 0);
-      html += `<p>🔥 XRP: ${tx.amount}</p>`;
-    }
-  });
-
-  document.getElementById("rewardsList").innerHTML = html;
-  document.getElementById("rewardTotal").innerText = "Total: " + total.toFixed(4);
+geminiStats.innerHTML=`💎 XRP Earned: ${rewards.toFixed(4)}`;
 }
 
-// =====================
-// 🔘 BUTTON FIXES
-// =====================
-async function addTrade(){
-  await fetch("/trade",{
-    method:"POST",
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({
-      coin:coin.value.toUpperCase(),
-      amount:+amount.value,
-      price:+price.value
-    })
-  });
-
-  load();
-}
-
-async function addAlert(){
-  await fetch("/alert",{
-    method:"POST",
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({
-      coin:alertCoin.value.toUpperCase(),
-      price:+alertPrice.value
-    })
-  });
-
-  alert("Alert set 🔔");
-}
-
-async function addStake(){
-  await fetch("/stake",{
-    method:"POST",
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({
-      coin:stakeCoin.value.toUpperCase(),
-      amount:+stakeAmount.value
-    })
-  });
-
-  alert("Stake added 🏦");
-}
-
-// =====================
-// 📡 LIVE PRICES
-// =====================
+// LIVE XRP
 setInterval(async ()=>{
-  try{
-    const res = await fetch("https://api.coinbase.com/v2/exchange-rates?currency=USD");
-    const data = await res.json();
-
-    ["BTC","ETH","XRP"].forEach(c=>{
-      LIVE_PRICES[c] = 1 / data.data.rates[c];
-    });
-
-    renderLivePrices();
-
-    checkAlerts();
-
-  }catch{}
+const r=await fetch("https://api.coinbase.com/v2/exchange-rates?currency=USD");
+const d=await r.json();
+LIVE_PRICES.XRP=1/d.data.rates.XRP;
+renderLive();
 },2500);
 
-function renderLivePrices(){
-  let html="";
-  for(let c in LIVE_PRICES){
-    html += `<div class="card"><h3>${c}</h3><p>$${LIVE_PRICES[c].toFixed(2)}</p></div>`;
-  }
-  document.getElementById("livePrices").innerHTML = html;
+function renderLive(){
+livePrices.innerHTML=`
+<div class="card">
+<h3>XRP</h3>
+<p>$${LIVE_PRICES.XRP?.toFixed(2)||0}</p>
+</div>`;
 }
 
-// =====================
-// 🚨 ALERT CHECK
-// =====================
-function checkAlerts(){
-
-  GLOBAL_DATA.alerts?.forEach(a=>{
-    const price = LIVE_PRICES[a.coin];
-
-    if(price && price >= a.price){
-      sendNotification("🚨 Price Hit", `${a.coin} hit $${a.price}`);
-    }
-  });
-
-}
-
-// =====================
-// 📊 LIVE XRP CHART
-// =====================
-let chartData = {labels:[],datasets:[{data:[],tension:.4}]};
-
-function initLiveChart(){
-  const ctx = document.getElementById("liveChart");
-  if(!ctx) return;
-
-  new Chart(ctx,{
-    type:"line",
-    data:chartData
-  });
-}
+// CHART
+let cd={labels:[],datasets:[{data:[]}]};
+new Chart(document.getElementById("liveChart"),{type:"line",data:cd});
 
 setInterval(()=>{
-  if(LIVE_PRICES["XRP"]){
-    chartData.labels.push("");
-    chartData.datasets[0].data.push(LIVE_PRICES["XRP"]);
-
-    if(chartData.labels.length > 20){
-      chartData.labels.shift();
-      chartData.datasets[0].data.shift();
-    }
-  }
+if(LIVE_PRICES.XRP){
+cd.labels.push("");
+cd.datasets[0].data.push(LIVE_PRICES.XRP);
+if(cd.labels.length>20){
+cd.labels.shift();
+cd.datasets[0].data.shift();
+}
+}
 },2500);
 
-initLiveChart();
+// CACHE + LOAD
+const cached=localStorage.getItem("offlineData");
+if(cached){
+const d=JSON.parse(cached);
+renderPortfolio(d);
+renderGemini(d);
+}
 
-// =====================
-// 🔁 AUTO LOAD
-// =====================
-setInterval(load, 5000);
+setInterval(load,5000);
 load();
 
-// =====================
-// ⚙️ SERVICE WORKER
-// =====================
-if("serviceWorker" in navigator){
-  navigator.serviceWorker.register("/service-worker.js");
-}
-// =====================
-// 💀 LEVEL 2 NOTIFICATIONS SYSTEM
-// =====================
-
-// SOUND (silent fallback if not allowed)
-const alertSound = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
-
-// cooldown system (prevents spam)
-let notifMemory = JSON.parse(localStorage.getItem("notifMemory") || "{}");
-
-function canNotify(key, cooldown = 30000){
-  const now = Date.now();
-
-  if(!notifMemory[key] || now - notifMemory[key] > cooldown){
-    notifMemory[key] = now;
-    localStorage.setItem("notifMemory", JSON.stringify(notifMemory));
-    return true;
-  }
-
-  return false;
-}
-
-// UPGRADED NOTIFICATION
-function sendSmartNotification(title, body, tag){
-
-  if(Notification.permission !== "granted") return;
-
-  // prevent spam
-  if(!canNotify(tag)) return;
-
-  // play sound
-  try { alertSound.play(); } catch {}
-
-  new Notification(title, {
-    body,
-    icon:"/icon-192.png",
-    badge:"/icon-192.png",
-    tag,
-    renotify:true
-  });
-}
-
-// =====================
-// 💎 REWARD NOTIFICATIONS (UPGRADE)
-// =====================
-function checkRewardNotifications(data){
-
-  data.transactions?.forEach(tx=>{
-    if(tx.currency === "XRP" && tx.type === "Credit"){
-
-      const id = tx.txid || tx.timestamp || tx.amount;
-
-      if(!seenRewards.includes(id)){
-        seenRewards.push(id);
-        localStorage.setItem("seenRewards", JSON.stringify(seenRewards));
-
-        sendSmartNotification(
-          "💎 XRP Reward",
-          `+${parseFloat(tx.amount).toFixed(4)} XRP received`,
-          "xrp-reward"
-        );
-      }
-    }
-  });
-
-}
-
-// =====================
-// 🚨 PRICE ALERT UPGRADE
-// =====================
-function checkPriceNotifications(){
-
-  GLOBAL_DATA.alerts?.forEach(a=>{
-    const price = LIVE_PRICES[a.coin];
-
-    if(price && price >= a.price){
-
-      sendSmartNotification(
-        "🚨 Price Hit",
-        `${a.coin} reached $${price.toFixed(2)}`,
-        `price-${a.coin}`
-      );
-
-    }
-  });
-
-}
-
-// =====================
-// 💰 PROFIT ALERT SYSTEM
-// =====================
-function checkProfitNotifications(data){
-
-  let totalCost = 0;
-  let totalValue = 0;
-
-  data.trades?.forEach(t=>{
-    const price = data.prices[t.coin] || 0;
-
-    totalCost += t.amount * t.price;
-    totalValue += t.amount * price;
-  });
-
-  const profit = totalValue - totalCost;
-
-  // trigger every $100 gain
-  if(profit > 0){
-
-    const rounded = Math.floor(profit / 100) * 100;
-
-    if(rounded > 0){
-      sendSmartNotification(
-        "💰 Profit Milestone",
-        `You are up $${rounded}+`,
-        "profit"
-      );
-    }
-  }
-}
-
-// =====================
-// 🔁 HOOK INTO YOUR SYSTEM
-// =====================
-
-// extend your existing load()
-const originalLoad = load;
-
-load = async function(){
-  await originalLoad();
-
-  if(GLOBAL_DATA){
-    checkRewardNotifications(GLOBAL_DATA);
-    checkProfitNotifications(GLOBAL_DATA);
-  }
-};
-
-// extend live price loop
-setInterval(()=>{
-  checkPriceNotifications();
-}, 4000);
 </script>
-
 </body>
 </html>
