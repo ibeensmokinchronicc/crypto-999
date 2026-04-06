@@ -8,12 +8,15 @@ app.use(cors());
 const PORT = process.env.PORT || 3000;
 
 /* =========================
-   FORMAT PRIVATE KEY
+   FORMAT PRIVATE KEY (FIXED)
 ========================= */
 function formatPrivateKey(key) {
   if (!key) return "";
-  if (key.includes("-----BEGIN") && key.includes("\n")) return key;
-  return key.replace(/\\n/g, "\n");
+
+  // convert \n → real line breaks if needed
+  let formatted = key.includes("\\n") ? key.replace(/\\n/g, "\n") : key;
+
+  return formatted.trim();
 }
 
 /* =========================
@@ -69,7 +72,7 @@ async function getGeminiBalances() {
 }
 
 /* =========================
-   COINBASE FETCH (FIXED)
+   COINBASE FETCH (FINAL FIX)
 ========================= */
 async function getCoinbaseAccounts() {
   try {
@@ -83,7 +86,11 @@ async function getCoinbaseAccounts() {
     sign.update(message);
     sign.end();
 
-    const signature = sign.sign(COINBASE_PRIVATE_KEY, "base64");
+    const signature = sign.sign({
+      key: COINBASE_PRIVATE_KEY,
+      format: "pem",
+      type: "sec1"
+    }, "base64");
 
     const res = await fetch("https://api.coinbase.com" + requestPath, {
       method: method,
@@ -97,7 +104,7 @@ async function getCoinbaseAccounts() {
 
     const text = await res.text();
 
-    // 🔥 FIX: handle non-JSON (Unauthorized)
+    // handle non-JSON response (like Unauthorized)
     if (!text.startsWith("{")) {
       return { error: text };
     }
@@ -119,7 +126,7 @@ async function getCoinbaseAccounts() {
 }
 
 /* =========================
-   PRICE FETCH (FIXED)
+   PRICE FETCH (SAFE)
 ========================= */
 async function getPrices() {
   try {
@@ -130,7 +137,11 @@ async function getPrices() {
     const text = await res.text();
 
     if (!text.startsWith("{")) {
-      return { bitcoin: { usd: 0 }, ethereum: { usd: 0 }, ripple: { usd: 0 } };
+      return {
+        bitcoin: { usd: 0 },
+        ethereum: { usd: 0 },
+        ripple: { usd: 0 }
+      };
     }
 
     return JSON.parse(text);
