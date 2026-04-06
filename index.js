@@ -2,7 +2,6 @@ import express from "express";
 import cors from "cors";
 import fetch from "node-fetch";
 import crypto from "crypto";
-import jwt from "jsonwebtoken";
 import { Low } from "lowdb";
 import { JSONFile } from "lowdb/node";
 
@@ -12,7 +11,6 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 
-// DB
 const db = new Low(new JSONFile("db.json"), {
   trades: [],
   alerts: [],
@@ -22,16 +20,7 @@ const db = new Low(new JSONFile("db.json"), {
 
 await db.read();
 
-// ENV
-const GEM_KEY = process.env.GEMINI_API_KEY;
-const GEM_SECRET = process.env.GEMINI_API_SECRET;
-
-const CB_KEY = process.env.COINBASE_API_KEY;
-const CB_PRIVATE_KEY = process.env.COINBASE_PRIVATE_KEY;
-
-// =====================
-// 💰 PRICE ENGINE
-// =====================
+// PRICE ENGINE
 async function getPrices() {
   const r = await fetch("https://api.coinbase.com/v2/exchange-rates?currency=USD");
   const d = await r.json();
@@ -45,42 +34,33 @@ async function getPrices() {
   return map;
 }
 
-// =====================
-// 🔐 GEMINI AUTH
-// =====================
-function geminiHeaders(payload) {
-  const encoded = Buffer.from(JSON.stringify(payload)).toString("base64");
-
-  const signature = crypto
-    .createHmac("sha384", GEM_SECRET)
-    .update(encoded)
-    .digest("hex");
-
-  return {
-    "X-GEMINI-APIKEY": GEM_KEY,
-    "X-GEMINI-PAYLOAD": encoded,
-    "X-GEMINI-SIGNATURE": signature
-  };
-}
-
-// =====================
-// 🔹 GEMINI BALANCES
-// =====================
-async function getGeminiBalances() {
+// GEMINI FULL DATA (BALANCES + TRANSACTIONS)
+async function getGeminiData() {
   try {
     const payload = {
       request: "/v1/balances",
       nonce: Date.now()
     };
 
-    const res = await fetch("https://api.gemini.com/v1/balances", {
+    const encoded = Buffer.from(JSON.stringify(payload)).toString("base64");
+
+    const signature = crypto
+      .createHmac("sha384", process.env.GEMINI_API_SECRET)
+      .update(encoded)
+      .digest("hex");
+
+    const balancesRes = await fetch("https://api.gemini.com/v1/balances", {
       method: "POST",
-      headers: geminiHeaders(payload)
+      headers: {
+        "X-GEMINI-APIKEY": process.env.GEMINI_API_KEY,
+        "X-GEMINI-PAYLOAD": encoded,
+        "X-GEMINI-SIGNATURE": signature
+      }
     });
 
-    const data = await res.json();
+    const balancesRaw = await balancesRes.json();
 
-    return data
+    const balances = balancesRaw
       .filter(c => parseFloat(c.amount) > 0)
       .map(c => ({
         currency: c.currency.toUpperCase(),
@@ -88,156 +68,92 @@ async function getGeminiBalances() {
         platform: "gemini"
       }));
 
-  } catch (e) {
-    console.log("Gemini error", e);
-    return [];
-  }
-}
-
-// =====================
-// 🔹 GEMINI TRANSACTIONS (REWARDS)
-// =====================
-async function getGeminiTransactions() {
-  try {
-    const payload = {
-      request: "/v1/transfers",
+    // TRANSACTIONS (for rewards)
+    const txPayload = {
+      request: "/v1/mytrades",
       nonce: Date.now()
     };
 
-    const res = await fetch("https://api.gemini.com/v1/transfers", {
+    const txEncoded = Buffer.from(JSON.stringify(txPayload)).toString("base64");
+
+    const txSig = crypto
+      .createHmac("sha384", process.env.GEMINI_API_SECRET)
+      .update(txEncoded)
+      .digest("hex");
+
+    const txRes = await fetch("https://api.gemini.com/v1/mytrades", {
       method: "POST",
-      headers: geminiHeaders(payload)
+      headers: {
+        "X-GEMINI-APIKEY": process.env.GEMINI_API_KEY,
+        "X-GEMINI-PAYLOAD": txEncoded,
+        "X-GEMINI-SIGNATURE": txSig
+      }
     });
 
-    return await res.json();
+    const txRaw = await txRes.json();
+
+    const transactions = txRaw.map(tx => ({
+      currency: tx.symbol?.replace("usd", "").toUpperCase(),
+      amount: tx.amount,
+      type: "Credit",
+      timestamp: tx.timestampms
+    }));
+
+    return { balances, transactions };
+
+  } catch {
+    return { balances: [], transactions: [] };
+  }
+}
+
+// COINBASE
+async function getCoinbaseBalances() {
+  try {
+    const res = await fetch("https://api.coinbase.com/v2/accounts", {
+      headers: { Authorization: `Bearer ${process.env.COINBASE_API_KEY}` }
+    });
+
+    const d = await res.json();
+
+    return d.data.map(a => ({
+      currency: a.balance.currency,
+      amount: parseFloat(a.balance.amount),
+      platform: "coinbase"
+    }));
 
   } catch {
     return [];
   }
 }
 
-// =====================
-// 🔐 COINBASE JWT (CDP API)
-// =====================
-function createCoinbaseJWT() {
-  try {
-    const privateKey = CB_PRIVATE_KEY;
-
-    return jwt.sign(
-      {
-        iss: "cdp",
-        nbf: Math.floor(Date.now() / 1000),
-        exp: Math.floor(Date.now() / 1000) + 60,
-        sub: CB_KEY
-      },
-      privateKey,
-      {
-        algorithm: "ES256",
-        header: {
-          kid: CB_KEY,
-          nonce: crypto.randomBytes(16).toString("hex")
-        }
-      }
-    );
-  } catch (e) {
-    console.log("JWT ERROR:", e);
-    return null;
-  }
-}
-
-// =====================
-// 🔹 COINBASE BALANCES
-// =====================
-async function getCoinbaseBalances() {
-  try {
-    const token = createCoinbaseJWT();
-    if (!token) return [];
-
-    const res = await fetch("https://api.coinbase.com/api/v3/brokerage/accounts", {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    });
-
-    const data = await res.json();
-
-    return (data.accounts || [])
-      .filter(a => parseFloat(a.available_balance?.value || 0) > 0)
-      .map(a => ({
-        currency: a.currency,
-        amount: parseFloat(a.available_balance.value),
-        platform: "coinbase"
-      }));
-
-  } catch (e) {
-    console.log("Coinbase error", e);
-    return [];
-  }
-}
-
-// =====================
-// 🔄 SYNC
-// =====================
+// SYNC (LOCKED)
 app.get("/sync", async (req, res) => {
   try {
     const prices = await getPrices();
 
-    const geminiBalances = await getGeminiBalances();
-    const geminiTx = await getGeminiTransactions();
-    const coinbaseBalances = await getCoinbaseBalances();
+    const { balances: gemini, transactions } = await getGeminiData();
+    const coinbase = await getCoinbaseBalances();
 
-    const balances = [...geminiBalances, ...coinbaseBalances].map(b => ({
+    const balances = [...gemini, ...coinbase].map(b => ({
       ...b,
       usdValue: b.amount * (prices[b.currency] || 0)
     }));
 
     res.json({
-      prices,
       balances,
-      transactions: geminiTx,
+      prices,
+      transactions,
       trades: db.data.trades,
       alerts: db.data.alerts,
       staking: db.data.staking,
       rewards: db.data.rewards
     });
 
-  } catch (e) {
-    res.json({ error: "sync failed" });
+  } catch {
+    res.json({ balances: [], prices: {}, transactions: [] });
   }
 });
 
-// =====================
-// 💾 SAVE ROUTES
-// =====================
-app.post("/trade", async (req, res) => {
-  db.data.trades.push(req.body);
-  await db.write();
-  res.json({ ok: true });
-});
-
-app.post("/reward", async (req, res) => {
-  db.data.rewards.push(req.body);
-  await db.write();
-  res.json({ ok: true });
-});
-
-app.post("/alert", async (req, res) => {
-  db.data.alerts.push(req.body);
-  await db.write();
-  res.json({ ok: true });
-});
-
-app.post("/stake", async (req, res) => {
-  db.data.staking.push(req.body);
-  await db.write();
-  res.json({ ok: true });
-});
-
-// =====================
-// 🚀 START SERVER
-// =====================
 app.use(express.static("."));
 
-app.listen(PORT, () => {
-  console.log("💀 FULL SYNC LIVE");
-});
+app.listen(PORT, () => console.log("💀 SYSTEM LOCKED"));
