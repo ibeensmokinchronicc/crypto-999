@@ -1,6 +1,6 @@
-const CACHE_NAME = "crypto-app-v5";
+const CACHE_NAME = "crypto-app-v6";
 
-// CORE FILES (APP SHELL)
+// STATIC FILES
 const STATIC_ASSETS = [
   "/",
   "/index.html",
@@ -16,9 +16,7 @@ self.addEventListener("install", event => {
   self.skipWaiting();
 
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      return cache.addAll(STATIC_ASSETS);
-    })
+    caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS))
   );
 });
 
@@ -29,11 +27,7 @@ self.addEventListener("activate", event => {
   event.waitUntil(
     caches.keys().then(keys =>
       Promise.all(
-        keys.map(key => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
-          }
-        })
+        keys.map(key => key !== CACHE_NAME && caches.delete(key))
       )
     )
   );
@@ -42,19 +36,18 @@ self.addEventListener("activate", event => {
 });
 
 // ======================
-// ⚡ FETCH STRATEGY
+// ⚡ FETCH HANDLER
 // ======================
 self.addEventListener("fetch", event => {
-
   const req = event.request;
 
-  // API STRATEGY (SMART CACHE)
+  // 💎 HANDLE API DATA (/sync)
   if (req.url.includes("/sync")) {
-    event.respondWith(networkFirst(req));
+    event.respondWith(networkWithCache(req));
     return;
   }
 
-  // STATIC FILES (CACHE FIRST)
+  // 📦 STATIC FILES
   event.respondWith(cacheFirst(req));
 });
 
@@ -77,23 +70,52 @@ async function cacheFirst(req) {
 }
 
 // ======================
-// 🌐 NETWORK FIRST (DATA)
+// 🧠 NETWORK + CACHE (DATA)
 // ======================
-async function networkFirst(req) {
+async function networkWithCache(req) {
   const cache = await caches.open(CACHE_NAME);
 
   try {
     const fresh = await fetch(req);
-    cache.put(req, fresh.clone());
+
+    // clone response
+    const clone = fresh.clone();
+
+    // store in cache
+    cache.put(req, clone);
+
+    // ALSO store JSON in IndexedDB-like cache (via Cache API)
+    const data = await fresh.clone().json();
+    await cache.put("/offline-data", new Response(JSON.stringify(data)));
+
     return fresh;
-  } catch {
+
+  } catch (e) {
+
+    // fallback to last cached API response
     const cached = await cache.match(req);
-    return cached || new Response(JSON.stringify({ offline: true }));
+
+    if (cached) return cached;
+
+    // fallback to saved offline data
+    const offline = await cache.match("/offline-data");
+
+    if (offline) return offline;
+
+    // final fallback
+    return new Response(JSON.stringify({
+      balances: [],
+      trades: [],
+      alerts: [],
+      staking: [],
+      rewards: [],
+      offline: true
+    }));
   }
 }
 
 // ======================
-// 🔔 PUSH NOTIFICATIONS
+// 🔔 PUSH
 // ======================
 self.addEventListener("push", event => {
   const data = event.data?.json() || {};
@@ -105,12 +127,9 @@ self.addEventListener("push", event => {
 });
 
 // ======================
-// 🔘 NOTIFICATION CLICK
+// 🔘 CLICK
 // ======================
 self.addEventListener("notificationclick", event => {
   event.notification.close();
-
-  event.waitUntil(
-    clients.openWindow("/")
-  );
+  event.waitUntil(clients.openWindow("/"));
 });
