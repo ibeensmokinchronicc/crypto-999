@@ -1,416 +1,257 @@
 <!DOCTYPE html>
 <html>
 <head>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>999 Crypto</title>
+<title>999 Crypto FINAL FIXED</title>
+
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/icon-192.png">
 
-
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 
 <style>
 body{
 margin:0;
 font-family:-apple-system;
-background:radial-gradient(circle at top,#0f0f0f,#000);
+background:#000;
 color:white;
-overflow-y:auto;
 }
 
-/* HEADER */
 h1{
 text-align:center;
 color:#c084fc;
-text-shadow:0 0 50px rgba(147,51,234,0.9);
+text-shadow:0 0 30px #9333ea;
 }
 
-/* MENU */
-.menu-btn{
-position:absolute;
-top:15px;
-right:15px;
-z-index:2000;
-background:rgba(30,30,30,0.7);
-border-radius:14px;
-padding:10px;
-backdrop-filter:blur(10px);
+#menuBtn{
+position:fixed;
+top:10px;
+left:10px;
+width:60px;
+height:60px;
+background:#111;
+border-radius:20px;
+display:flex;
+align-items:center;
+justify-content:center;
+font-size:26px;
+z-index:999999;
 }
 
-.menu{
-position:absolute;
-top:60px;
-right:15px;
-background:rgba(20,20,20,0.95);
+#menu{
+position:fixed;
+top:80px;
+left:10px;
+background:#111;
 border-radius:16px;
 padding:10px;
 display:none;
-z-index:2000;
-box-shadow:0 0 30px rgba(147,51,234,0.5);
+z-index:999999;
 }
-.menu.show{display:block;}
 
-.menu button{
+#menu button{
+display:block;
 width:100%;
+padding:12px;
 background:none;
 color:white;
-padding:12px;
-font-size:15px;
+border:none;
+text-align:left;
 }
 
-/* CARD */
+.tab{display:none; padding-top:80px;}
+.active{display:block;}
+
 .card{
-background:rgba(30,30,30,0.6);
+background:#1a1a1a;
 margin:12px;
 padding:16px;
-border-radius:18px;
-border:1px solid rgba(147,51,234,0.3);
-backdrop-filter:blur(14px);
-box-shadow:
-0 4px 30px rgba(0,0,0,0.7),
-0 0 25px rgba(147,51,234,0.3);
-transition:.25s;
+border-radius:16px;
 }
-.card:active{transform:scale(.96);}
 
-/* STATES */
-.profit{color:#22c55e;text-shadow:0 0 12px #22c55e;}
-.loss{color:#ef4444;text-shadow:0 0 12px #ef4444;}
-
-/* INPUT + BUTTON */
-input,button{
+input{
 width:100%;
-padding:12px;
-margin-top:6px;
-border:none;
-border-radius:12px;
-}
-button{
-background:linear-gradient(135deg,#9333ea,#6b21a8);
+padding:10px;
+margin:5px 0;
+background:#111;
 color:white;
-font-weight:600;
+border:none;
+border-radius:10px;
 }
 
-/* TABS */
-.hidden{display:none;}
-.tab{
-position:absolute;
+button.action{
+background:#9333ea;
+padding:10px;
+border:none;
+border-radius:10px;
+color:white;
 width:100%;
-top:70px;
 }
 </style>
-
-
 </head>
-
 
 <body>
 
-
 <h1>999 Crypto 💀</h1>
 
+<div id="menuBtn">☰</div>
 
-☰
-
-<div id="menu" class="menu">
-<button onclick="openTab('portfolioTab')">💰 Portfolio</button>
-<button onclick="openTab('analyticsTab')">📊 Analytics</button>
-<button onclick="openTab('rewardsTab')">💎 Rewards</button>
-<button onclick="openTab('eliteTab')">🧠 Elite</button>
-<button onclick="openTab('alertsTab')">🔔 Alerts</button>
-<button onclick="openTab('stakingTab')">🏦 Staking</button>
-<button onclick="openTab('aiTab')">🤖 AI</button>
-<button onclick="openTab('liveTab')">📡 Live</button>
+<div id="menu">
+<button data-tab="portfolio">Portfolio</button>
+<button data-tab="rewards">Rewards</button>
+<button data-tab="elite">Elite</button>
+<button data-tab="live">Live</button>
 </div>
 
-
-<!-- PORTFOLIO -->
-
-
-<div id="portfolioTab" class="tab">
+<div id="portfolio" class="tab active">
 <div class="card">
 <input id="coin" placeholder="Coin">
 <input id="amount" placeholder="Amount">
 <input id="price" placeholder="Buy Price">
-<button onclick="addTrade()">Add Trade</button>
-<button onclick="enableNotifications()">Enable Notifications 🔔</button>
+<button class="action" onclick="addTrade()">Add Trade</button>
 </div>
-<div id="portfolio"></div>
+<div id="portfolioList"></div>
 <h2 id="total"></h2>
 </div>
 
-
-<!-- ANALYTICS -->
-
-
-<div id="analyticsTab" class="tab hidden">
-<canvas id="chart"></canvas>
-</div>
-
-
-<!-- REWARDS -->
-
-
-<div id="rewardsTab" class="tab hidden">
+<div id="rewards" class="tab">
 <div class="card">
-<h3>💎 Rewards Engine</h3>
 <div id="rewardsList"></div>
-<p id="rewardTotal"></p>
-
-
-<div style="background:#222;height:10px;border-radius:10px;">
-<div id="gasBar" style="background:#9333ea;height:10px;width:0%;border-radius:10px"></div>
-</div>
-
-
-<p id="monthlyGas"></p>
-<p id="todayRewards"></p>
-<p id="prediction"></p>
-
-
+<p id="today"></p>
+<p id="predict"></p>
+<canvas id="rewardChart"></canvas>
 </div>
 </div>
 
-
-<!-- ELITE -->
-
-
-<div id="eliteTab" class="tab hidden">
+<div id="elite" class="tab">
 <div class="card">
-<h3>🧠 Elite Dashboard</h3>
-<div id="taxData"></div>
+<div id="eliteData"></div>
 </div>
 </div>
 
-
-<!-- ALERTS -->
-
-
-<div id="alertsTab" class="tab hidden">
-<div class="card">
-<input id="alertCoin" placeholder="Coin">
-<input id="alertPrice" placeholder="Price">
-<button onclick="addAlert()">Set Alert</button>
-</div>
-</div>
-
-
-<!-- STAKING -->
-
-
-<div id="stakingTab" class="tab hidden">
-<div class="card">
-<input id="stakeCoin" placeholder="Coin">
-<input id="stakeAmount" placeholder="Amount">
-<button onclick="addStake()">Add Stake</button>
-</div>
-</div>
-
-
-<!-- AI -->
-
-
-<div id="aiTab" class="tab hidden">
-<div class="card">
-<div id="aiBox">🤖 AI Insights Coming Soon...</div>
-</div>
-</div>
-
-
-<!-- LIVE -->
-
-
-<div id="liveTab" class="tab hidden">
+<div id="live" class="tab">
 <div class="card">
 <canvas id="liveChart"></canvas>
 </div>
-<div id="livePrices"></div>
+<div id="livePrice"></div>
 </div>
-
 
 <script>
 
-// NAV
-let currentTab="portfolioTab";
-function toggleMenu(){
-document.getElementById("menu").classList.toggle("show");
-}
-function openTab(id){
-document.querySelectorAll(".tab").forEach(t=>t.classList.add("hidden"));
-document.getElementById(id).classList.remove("hidden");
-currentTab=id;
-if(navigator.vibrate) navigator.vibrate(10);
-toggleMenu();
-}
+// MENU (FIXED)
+const btn=document.getElementById("menuBtn");
+const menu=document.getElementById("menu");
 
-// GLOBAL
-let GLOBAL_DATA={};
-let LIVE_PRICES={};
-let rewardHistory=JSON.parse(localStorage.getItem("rewardHistory")||"{}");
-let rewardChart;
+btn.addEventListener("click",e=>{
+e.stopPropagation();
+menu.style.display = menu.style.display==="block"?"none":"block";
+});
+
+document.addEventListener("click",e=>{
+if(!menu.contains(e.target)&&!btn.contains(e.target)){
+menu.style.display="none";
+}
+});
+
+document.querySelectorAll("#menu button").forEach(b=>{
+b.onclick=()=>{
+document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+document.getElementById(b.dataset.tab).classList.add("active");
+menu.style.display="none";
+};
+});
+
+// DATA
+let history={};
 
 // LOAD
 async function load(){
 try{
-const r=await fetch("/sync");
-const d=await r.json();
-GLOBAL_DATA=d;
-
+let r=await fetch("/sync");
+let d=await r.json();
 renderPortfolio(d);
 renderRewards(d);
 renderElite(d);
-
 }catch{}
 }
 
 // PORTFOLIO
-function renderPortfolio(data){
+function renderPortfolio(d){
 let total=0;
-const el=document.getElementById("portfolio");
-el.innerHTML="";
-data.trades?.forEach(t=>{
-const val=t.amount*(data.prices[t.coin]||0);
+portfolioList.innerHTML="";
+(d.trades||[]).forEach(t=>{
+let val=t.amount*(d.prices?.[t.coin]||0);
 total+=val;
-el.innerHTML+=`<div class="card">${t.coin} $${val.toFixed(2)}</div>`;
+portfolioList.innerHTML+=`<div class='card'>${t.coin} $${val.toFixed(2)}</div>`;
 });
-document.getElementById("total").innerText="$"+total.toFixed(2);
-}
-
-// CATEGORY
-function categorize(tx){
-const d=(tx.description||"").toLowerCase();
-if(d.includes("gas")) return "gas";
-if(d.includes("food")) return "dining";
-if(d.includes("market")) return "grocery";
-return "other";
+totalEl=document.getElementById("total");
+if(totalEl) totalEl.innerText="$"+total.toFixed(2);
 }
 
 // REWARDS
-function renderRewards(data){
-
-let totals={gas:0,dining:0,grocery:0,other:0};
-let totalRewards=0;
-
-data.transactions?.forEach(tx=>{
-const amt=Math.abs(parseFloat(tx.amount||0));
-if(tx.type==="Debit") totals[categorize(tx)]+=amt;
-if(tx.currency==="XRP" && tx.type==="Credit") totalRewards+=parseFloat(tx.amount||0);
+function renderRewards(d){
+let gas=0;
+(d.transactions||[]).forEach(tx=>{
+if(tx.type==="Debit"&&(tx.description||"").includes("gas")) gas+=Math.abs(tx.amount);
 });
+let reward=gas*0.04;
 
-const rewardsUSD=
-(Math.min(totals.gas,300)*0.04)+
-(Math.max(totals.gas-300,0)*0.01)+
-(totals.dining*0.03)+
-(totals.grocery*0.02)+
-(totals.other*0.01);
+rewardsList.innerHTML=`Gas $${gas}<br>Reward $${reward.toFixed(2)}`;
 
-const xrp=data.prices["XRP"]||0;
-const est=xrp?(rewardsUSD/xrp):0;
+let day=new Date().toISOString().split("T")[0];
+history[day]=(history[day]||0)+reward;
 
-document.getElementById("rewardsList").innerHTML=`
-<div class="card">⛽ Gas $${totals.gas.toFixed(2)}</div>
-<div class="card">🍔 Dining $${totals.dining.toFixed(2)}</div>
-<div class="card">🛒 Grocery $${totals.grocery.toFixed(2)}</div>
-<div class="card">📦 Other $${totals.other.toFixed(2)}</div>
-<div class="card profit">💎 ${est.toFixed(4)} XRP</div>
-`;
+today.innerText="Today: $"+history[day].toFixed(2);
 
-document.getElementById("rewardTotal").innerText="💀 Real XRP: "+totalRewards.toFixed(4);
-
-const today=new Date().toISOString().split("T")[0];
-rewardHistory[today]=(rewardHistory[today]||0)+est;
-localStorage.setItem("rewardHistory",JSON.stringify(rewardHistory));
-
-document.getElementById("monthlyGas").innerText=`Gas: $${totals.gas.toFixed(2)}/300`;
-document.getElementById("todayRewards").innerText=`Today: ${rewardHistory[today].toFixed(4)} XRP`;
-
-const avg=Object.values(rewardHistory).reduce((a,b)=>a+b,0)/(Object.keys(rewardHistory).length||1);
-document.getElementById("prediction").innerText=`Projected: ${(avg*30).toFixed(2)} XRP`;
-
-const ctx=document.getElementById("rewardChart");
-if(ctx){
-if(rewardChart) rewardChart.destroy();
-rewardChart=new Chart(ctx,{
-type:"line",
-data:{
-labels:Object.keys(rewardHistory).slice(-7),
-datasets:[{data:Object.values(rewardHistory).slice(-7),tension:.4}]
+let avg=Object.values(history).reduce((a,b)=>a+b,0)/(Object.keys(history).length||1);
+predict.innerText="Projected: $"+(avg*30).toFixed(2);
 }
-
-
 
 // ELITE
-function renderElite(data){
-let cost=0,value=0;
-data.trades?.forEach(t=>{
-cost+=t.amount*t.price;
-value+=t.amount*(data.prices[t.coin]||0);
-});
-const pnl=value-cost;
-document.getElementById("taxData").innerHTML=
-`<p class="${pnl>=0?'profit':'loss'}">PnL: $${pnl.toFixed(2)}</p>`;
+function renderElite(d){
+eliteData.innerText="Trades: "+(d.trades?.length||0);
 }
 
-// LIVE
-let liveChart;
-let liveData={labels:[],datasets:[{data:[]}]};
-
-function initChart(){
-const ctx=document.getElementById("liveChart");
-if(ctx) liveChart=new Chart(ctx,{type:"line",data:liveData});
-}
-
-setInterval(async()=>{
-const r=await fetch("https://api.coinbase.com/v2/exchange-rates?currency=USD");
-const d=await r.json();
-
-LIVE_PRICES.XRP=1/d.data.rates.XRP;
-
-document.getElementById("livePrices").innerHTML=`$${LIVE_PRICES.XRP.toFixed(2)}`;
-
-liveData.labels.push("");
-liveData.datasets[0].data.push(LIVE_PRICES.XRP);
-
-if(liveData.labels.length>20){
-liveData.labels.shift();
-liveData.datasets[0].data.shift();
-}
-
-if(liveChart) liveChart.update();
-
-},2500);
-
-initChart();
-
-// ACTIONS
+// ACTION
 async function addTrade(){
 await fetch("/trade",{method:"POST",headers:{'Content-Type':'application/json'},
-body:JSON.stringify({coin:coin.value.toUpperCase(),amount:+amount.value,price:+price.value})});
+body:JSON.stringify({coin:coin.value,amount:+amount.value,price:+price.value})});
 load();
 }
 
-async function addAlert(){
-await fetch("/alert",{method:"POST",headers:{'Content-Type':'application/json'},
-body:JSON.stringify({coin:alertCoin.value.toUpperCase(),price:+alertPrice.value})});
-alert("Alert set 🔔");
+// LIVE
+let chart;
+let data={labels:[],datasets:[{data:[]}]};
+
+function init(){
+chart=new Chart(document.getElementById("liveChart"),{type:"line",data});
 }
 
-async function addStake(){
-await fetch("/stake",{method:"POST",headers:{'Content-Type':'application/json'},
-body:JSON.stringify({coin:stakeCoin.value.toUpperCase(),amount:+stakeAmount.value})});
-alert("Stake added 🏦");
+setInterval(async()=>{
+try{
+let r=await fetch("https://api.coinbase.com/v2/exchange-rates?currency=USD");
+let d=await r.json();
+let p=1/d.data.rates.XRP;
+livePrice.innerText="$"+p.toFixed(2);
+
+data.labels.push("");
+data.datasets[0].data.push(p);
+
+if(data.labels.length>20){
+data.labels.shift();
+data.datasets[0].data.shift();
 }
 
-async function enableNotifications(){
-await Notification.requestPermission();
-}
+chart.update();
+}catch{}
+},3000);
 
-// LOOP
+init();
 setInterval(load,5000);
 load();
 
 </script>
+
 </body>
 </html>
-
