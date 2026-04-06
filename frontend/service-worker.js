@@ -1,16 +1,13 @@
-const CACHE_NAME = "crypto-999-v1";
+const CACHE_NAME = "crypto-app-v1";
 
 const urlsToCache = [
   "/",
-  "/index.html",
-  "/manifest.json",
-  "/icon.png"
+  "/index.html"
 ];
 
 self.addEventListener("install", event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
-      console.log("Caching app files");
       return cache.addAll(urlsToCache);
     })
   );
@@ -22,4 +19,4 @@ self.addEventListener("fetch", event => {
       return response || fetch(event.request);
     })
   );
-})
+});
