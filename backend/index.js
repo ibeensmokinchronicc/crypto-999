@@ -14,7 +14,7 @@ const COINBASE_API_KEY = process.env.COINBASE_API_KEY;
 
 let COINBASE_PRIVATE_KEY = process.env.COINBASE_PRIVATE_KEY;
 
-// Fix \n issue if present
+// Fix \n formatting if needed
 if (COINBASE_PRIVATE_KEY && COINBASE_PRIVATE_KEY.includes("\\n")) {
   COINBASE_PRIVATE_KEY = COINBASE_PRIVATE_KEY.replace(/\\n/g, "\n");
 }
@@ -59,12 +59,13 @@ async function getGeminiBalances() {
   }
 }
 
-// ---------------- COINBASE (FINAL FIX) ----------------
+// ---------------- COINBASE ----------------
 async function getCoinbaseAccounts() {
   try {
-    const uri = "const uri = "GET /api/v3/brokerage/accounts";
+    // ✅ CORRECT URI (THIS FIXES UNAUTHORIZED)
+    const uri = "GET /api/v3/brokerage/accounts";
 
-    // 🔥 THIS FIXES YOUR EC KEY ISSUE
+    // ✅ FIX EC KEY PARSING
     const PRIVATE_KEY_OBJ = crypto.createPrivateKey({
       key: COINBASE_PRIVATE_KEY,
       format: "pem"
@@ -92,7 +93,15 @@ async function getCoinbaseAccounts() {
       }
     });
 
-    const data = await res.json();
+    const text = await res.text();
+
+    // Handle non-JSON responses safely
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      return [{ error: text }];
+    }
 
     if (!data.accounts) return [{ error: data }];
 
