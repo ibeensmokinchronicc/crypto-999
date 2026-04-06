@@ -12,9 +12,7 @@ const PORT = process.env.PORT || 3000;
 ========================= */
 function formatPrivateKey(key) {
   if (!key) return "";
-
-  let formatted = key.includes("\\n") ? key.replace(/\\n/g, "\n") : key;
-  return formatted.trim();
+  return key.includes("\\n") ? key.replace(/\\n/g, "\n").trim() : key.trim();
 }
 
 /* =========================
@@ -27,7 +25,7 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_API_SECRET = process.env.GEMINI_API_SECRET;
 
 /* =========================
-   GEMINI
+   GEMINI BALANCES
 ========================= */
 async function getGeminiBalances() {
   try {
@@ -69,7 +67,7 @@ async function getGeminiBalances() {
 }
 
 /* =========================
-   COINBASE (FIXED SIGNING)
+   COINBASE (ED25519 FIX)
 ========================= */
 async function getCoinbaseAccounts() {
   try {
@@ -79,15 +77,12 @@ async function getCoinbaseAccounts() {
 
     const message = timestamp + method + requestPath;
 
-    const sign = crypto.createSign("SHA256");
-    sign.update(message);
-    sign.end();
-
-    const signature = sign.sign({
-      key: COINBASE_PRIVATE_KEY,
-      format: "pem",
-      type: "sec1"
-    }, "base64");
+    // ✅ ED25519 SIGNING
+    const signature = crypto.sign(
+      null,
+      Buffer.from(message),
+      COINBASE_PRIVATE_KEY
+    ).toString("base64");
 
     const res = await fetch("https://api.coinbase.com" + requestPath, {
       method: method,
@@ -123,7 +118,7 @@ async function getCoinbaseAccounts() {
 }
 
 /* =========================
-   COINBASE PRICES (NEW)
+   COINBASE PRICES
 ========================= */
 async function getPrices() {
   try {
@@ -152,10 +147,12 @@ async function getPrices() {
 }
 
 /* =========================
-   MERGE + USD CALC
+   ATTACH USD VALUES
 ========================= */
 function attachUSDValues(balances, prices) {
   return balances.map(asset => {
+    if (asset.error) return asset;
+
     const price = prices[asset.currency] || 0;
 
     return {
@@ -181,7 +178,9 @@ app.get("/sync", async (req, res) => {
 
     const enriched = attachUSDValues(allBalances, prices);
 
-    const totalUSD = enriched.reduce((sum, a) => sum + (a.usdValue || 0), 0);
+    const totalUSD = enriched.reduce((sum, a) => {
+      return sum + (a.usdValue || 0);
+    }, 0);
 
     res.json({
       balances: enriched,
