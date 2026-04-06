@@ -12,29 +12,62 @@ body {
   font-family:-apple-system;
   background:radial-gradient(circle,#0a0a0a,#000);
   color:white;
+  overflow-x:hidden;
 }
 
+/* HEADER */
 h1 {
   text-align:center;
   color:#c084fc;
+  text-shadow:0 0 15px #9333ea;
+  animation:fadeIn 1s ease;
 }
 
+/* CARD */
 .card {
   background:rgba(20,20,20,0.7);
   margin:10px;
-  padding:12px;
-  border-radius:12px;
-  border:1px solid #9333ea;
+  padding:14px;
+  border-radius:14px;
+  border:1px solid rgba(147,51,234,0.3);
+  backdrop-filter:blur(10px);
+  box-shadow:0 0 10px rgba(147,51,234,0.2);
+  animation:slideUp .4s ease;
+  transition:.2s;
 }
 
-button {
-  background:#9333ea;
-  border:none;
+.card:hover {
+  transform:translateY(-3px);
+  box-shadow:0 0 20px #9333ea;
+}
+
+/* INPUTS */
+input {
+  width:100%;
   padding:10px;
+  margin:6px 0;
   border-radius:8px;
+  border:none;
+  background:#111;
   color:white;
 }
 
+/* BUTTON */
+button {
+  width:100%;
+  padding:10px;
+  border-radius:10px;
+  border:none;
+  background:linear-gradient(135deg,#9333ea,#6b21a8);
+  color:white;
+  transition:.2s;
+}
+
+button:active {
+  transform:scale(.95);
+}
+
+/* TABS */
 .tabs {
   position:fixed;
   bottom:0;
@@ -42,24 +75,54 @@ button {
   display:flex;
   justify-content:space-around;
   background:#000;
+  border-top:1px solid #9333ea;
 }
 
+.tabs button {
+  width:100%;
+  background:none;
+  font-size:18px;
+}
+
+/* STATES */
 .hidden { display:none; }
 .profit { color:#22c55e; }
 .loss { color:#ef4444; }
+
+/* ANIMATIONS */
+@keyframes fadeIn {
+  from {opacity:0;}
+  to {opacity:1;}
+}
+
+@keyframes slideUp {
+  from {transform:translateY(20px);opacity:0;}
+  to {transform:translateY(0);opacity:1;}
+}
+
+/* PARTICLES */
+#bg {
+  position:fixed;
+  top:0;
+  left:0;
+  z-index:-1;
+}
 </style>
 </head>
 
 <body>
 
+<canvas id="bg"></canvas>
+
 <h1>999 Crypto</h1>
 
+<!-- PORTFOLIO -->
 <div id="portfolioTab">
 <div class="card">
-<input id="coin" placeholder="Coin">
+<input id="coin" placeholder="Coin (BTC)">
 <input id="amount" placeholder="Amount">
 <input id="price" placeholder="Buy Price">
-<button onclick="addTrade()">Add</button>
+<button onclick="addTrade()">Add Trade</button>
 </div>
 
 <div id="portfolio"></div>
@@ -67,90 +130,167 @@ button {
 <h3 id="profit"></h3>
 </div>
 
+<!-- ANALYTICS -->
 <div id="analyticsTab" class="hidden">
 <canvas id="chart"></canvas>
-<canvas id="equity"></canvas>
 </div>
 
+<!-- ALERTS -->
 <div id="alertsTab" class="hidden">
-<input id="alertCoin">
-<input id="alertPrice">
+<div class="card">
+<input id="alertCoin" placeholder="Coin">
+<input id="alertPrice" placeholder="Target Price">
 <button onclick="addAlert()">Set Alert</button>
 </div>
+</div>
 
+<!-- STAKING -->
 <div id="stakingTab" class="hidden">
-<input id="stakeCoin">
-<input id="stakeAmount">
-<button onclick="addStake()">Stake</button>
+<div class="card">
+<input id="stakeCoin" placeholder="Coin">
+<input id="stakeAmount" placeholder="Amount">
+<button onclick="addStake()">Add Stake</button>
+</div>
 </div>
 
-<div id="rewardsTab" class="hidden">
-<h3 id="rewards"></h3>
-</div>
-
+<!-- NAV -->
 <div class="tabs">
 <button onclick="tab('portfolioTab')">💰</button>
 <button onclick="tab('analyticsTab')">📊</button>
 <button onclick="tab('alertsTab')">🔔</button>
 <button onclick="tab('stakingTab')">🏦</button>
-<button onclick="tab('rewardsTab')">💳</button>
 </div>
 
 <script>
 
+let chartInstance;
+
+// TAB SWITCH
 function tab(id){
-["portfolioTab","analyticsTab","alertsTab","stakingTab","rewardsTab"]
+["portfolioTab","analyticsTab","alertsTab","stakingTab"]
 .forEach(t=>document.getElementById(t).classList.add("hidden"));
-document.getElementById(id).classList.remove("hidden");
+
+const el = document.getElementById(id);
+el.classList.remove("hidden");
+el.style.animation="fadeIn .3s";
 }
 
+// LOAD
 async function load(){
 const res = await fetch("/sync");
 const data = await res.json();
 
-let total=0, profit=0;
+let total=0;
+let profit=0;
+
 portfolio.innerHTML="";
 
 data.trades.forEach(t=>{
 const p=data.prices[t.coin]||0;
-const val=t.amount*p;
+const value=t.amount*p;
 const cost=t.amount*t.price;
 
-total+=val;
-profit+=val-cost;
+total+=value;
+profit+=value-cost;
 
 portfolio.innerHTML+=`
 <div class="card">
 <h3>${t.coin}</h3>
-<p>$${val.toFixed(2)}</p>
-<p class="${val-cost>=0?'profit':'loss'}">
-${(val-cost).toFixed(2)}
+<p>$${value.toFixed(2)}</p>
+<p class="${value-cost>=0?'profit':'loss'}">
+${(value-cost).toFixed(2)}
 </p>
-<p>${t.platform||"manual"}</p>
 </div>`;
 });
 
-totalEl.innerText="Total: $"+total.toFixed(2);
-profitEl.innerText="Profit: $"+profit.toFixed(2);
+document.getElementById("total").innerText="Total: $"+total.toFixed(2);
+document.getElementById("profit").innerText="Profit: $"+profit.toFixed(2);
+
+// CHART
+const labels=data.trades.map(t=>t.coin);
+const values=data.trades.map(t=>t.amount*(data.prices[t.coin]||0));
+
+if(chartInstance) chartInstance.destroy();
+
+chartInstance=new Chart(chart,{
+type:"doughnut",
+data:{labels,datasets:[{data:values}]}
+});
 }
 
-function addTrade(){
-fetch("/trade",{method:"POST",headers:{'Content-Type':'application/json'},
-body:JSON.stringify({coin:coin.value,amount:+amount.value,price:+price.value})});
+// ADD TRADE
+async function addTrade(){
+await fetch("/trade",{
+method:"POST",
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({
+coin:coin.value.toUpperCase(),
+amount:+amount.value,
+price:+price.value
+})
+});
+
+coin.value=""; amount.value=""; price.value="";
+load();
 }
 
+// ALERT
 function addAlert(){
-fetch("/alert",{method:"POST",headers:{'Content-Type':'application/json'},
-body:JSON.stringify({coin:alertCoin.value,price:+alertPrice.value})});
+fetch("/alert",{
+method:"POST",
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({
+coin:alertCoin.value,
+price:+alertPrice.value
+})
+});
 }
 
+// STAKE
 function addStake(){
-fetch("/stake",{method:"POST",headers:{'Content-Type':'application/json'},
-body:JSON.stringify({coin:stakeCoin.value,amount:+stakeAmount.value})});
+fetch("/stake",{
+method:"POST",
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({
+coin:stakeCoin.value,
+amount:+stakeAmount.value
+})
+});
 }
 
+// AUTO REFRESH
 setInterval(load,5000);
 load();
+
+// PARTICLES
+const bg=document.getElementById("bg");
+const ctx=bg.getContext("2d");
+
+bg.width=window.innerWidth;
+bg.height=window.innerHeight;
+
+let particles=Array.from({length:30},()=>({
+x:Math.random()*bg.width,
+y:Math.random()*bg.height,
+r:Math.random()*2,
+d:Math.random()*0.4
+}));
+
+function draw(){
+ctx.clearRect(0,0,bg.width,bg.height);
+ctx.fillStyle="rgba(147,51,234,0.3)";
+
+particles.forEach(p=>{
+ctx.beginPath();
+ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+ctx.fill();
+p.y+=p.d;
+if(p.y>bg.height)p.y=0;
+});
+
+requestAnimationFrame(draw);
+}
+draw();
 
 </script>
 </body>
