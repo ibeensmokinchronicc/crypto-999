@@ -6,103 +6,85 @@
 
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/icon-192.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-body {
-  margin:0;
-  font-family:-apple-system;
-  background:radial-gradient(circle at top,#0f0f0f,#000);
-  color:white;
-  padding-bottom:90px;
+body{
+margin:0;
+font-family:-apple-system;
+background:radial-gradient(circle,#0a0a0a,#000);
+color:white;
+padding-bottom:90px;
 }
 
 /* HEADER */
-h1 {
-  text-align:center;
-  color:#c084fc;
-  text-shadow:0 0 30px #9333ea;
-}
-
-/* MENU BUTTON */
-.menu-btn {
-  position:absolute;
-  top:15px;
-  right:15px;
-  background:rgba(20,20,20,0.7);
-  border:1px solid rgba(147,51,234,0.4);
-  backdrop-filter:blur(10px);
-  border-radius:12px;
-  padding:8px 12px;
-  box-shadow:0 0 10px rgba(147,51,234,0.5);
+h1{
+text-align:center;
+color:#c084fc;
+text-shadow:0 0 30px #9333ea;
 }
 
 /* MENU */
-.menu {
-  position:absolute;
-  top:55px;
-  right:15px;
-  width:180px;
-  background:rgba(20,20,20,0.85);
-  backdrop-filter:blur(18px);
-  border-radius:16px;
-  padding:10px;
-  border:1px solid rgba(147,51,234,0.3);
-  box-shadow:0 10px 30px rgba(0,0,0,0.7),
-              0 0 20px rgba(147,51,234,0.4);
-  transform:translateY(-10px);
-  opacity:0;
-  pointer-events:none;
-  transition:.25s ease;
+.menu-btn{
+position:absolute;
+top:15px;
+right:15px;
+background:rgba(20,20,20,0.7);
+border-radius:12px;
+padding:10px;
 }
 
-.menu.show {
-  transform:translateY(0);
-  opacity:1;
-  pointer-events:auto;
+.menu{
+position:absolute;
+top:60px;
+right:15px;
+background:rgba(20,20,20,0.95);
+border-radius:16px;
+padding:10px;
+display:none;
 }
 
-.menu button {
-  background:none;
-  border:none;
-  color:white;
-  padding:10px;
-  width:100%;
-  text-align:left;
+.menu.show{display:block;}
+
+.menu button{
+width:100%;
+background:none;
+color:white;
+padding:10px;
 }
 
 /* CARD */
-.card {
-  background:rgba(25,25,25,0.6);
-  margin:12px;
-  padding:16px;
-  border-radius:18px;
-  border:1px solid rgba(147,51,234,0.25);
+.card{
+background:rgba(25,25,25,0.6);
+margin:12px;
+padding:16px;
+border-radius:16px;
 }
 
 /* INPUT */
-input {
-  width:100%;
-  padding:12px;
-  margin:6px 0;
-  border-radius:12px;
-  border:none;
-  background:#0f0f0f;
-  color:white;
+input{
+width:100%;
+padding:12px;
+margin:6px 0;
+background:#111;
+color:white;
+border:none;
+border-radius:12px;
 }
 
 /* BUTTON */
-button {
-  padding:12px;
-  border-radius:14px;
-  border:none;
-  background:linear-gradient(135deg,#9333ea,#6b21a8);
-  color:white;
+button{
+background:linear-gradient(135deg,#9333ea,#6b21a8);
+border:none;
+color:white;
+padding:12px;
+border-radius:12px;
+width:100%;
+margin-top:6px;
 }
 
-.hidden { display:none; }
+.hidden{display:none;}
 </style>
 </head>
 
@@ -110,18 +92,16 @@ button {
 
 <h1>999 Crypto 💀</h1>
 
-<!-- MENU BUTTON -->
 <button class="menu-btn" onclick="toggleMenu()">☰</button>
 
-<!-- MENU -->
 <div id="menu" class="menu">
-  <button onclick="tab('portfolioTab')">💰 Portfolio</button>
-  <button onclick="tab('geminiTab')">💳 Gemini</button>
-  <button onclick="tab('analyticsTab')">📊 Analytics</button>
-  <button onclick="tab('alertsTab')">🔔 Alerts</button>
-  <button onclick="tab('stakingTab')">🏦 Staking</button>
-  <button onclick="tab('aiTab')">🤖 AI</button>
-  <button onclick="tab('liveTab')">📡 Live</button>
+<button onclick="tab('portfolioTab')">💰 Portfolio</button>
+<button onclick="tab('rewardsTab')">💎 Rewards</button>
+<button onclick="tab('eliteTab')">🧠 Elite</button>
+<button onclick="tab('alertsTab')">🔔 Alerts</button>
+<button onclick="tab('stakingTab')">🏦 Staking</button>
+<button onclick="tab('aiTab')">🤖 AI</button>
+<button onclick="tab('liveTab')">📡 Live</button>
 </div>
 
 <!-- PORTFOLIO -->
@@ -133,23 +113,48 @@ button {
 <button onclick="addTrade()">Add Trade</button>
 <button onclick="enableNotifications()">Enable Notifications 🔔</button>
 </div>
-
 <div id="portfolio"></div>
 <h2 id="total"></h2>
 <h3 id="profit"></h3>
 </div>
 
-<!-- GEMINI -->
-<div id="geminiTab" class="hidden">
+<!-- REWARDS -->
+<div id="rewardsTab" class="hidden">
 <div class="card">
-<h3>💎 Gemini Rewards</h3>
-<div id="geminiStats"></div>
+<h3>💎 Rewards</h3>
+
+<div id="rewardsList"></div>
+<p id="rewardTotal"></p>
+
+<div style="background:#222;height:10px;border-radius:10px;">
+<div id="gasBar" style="background:#9333ea;height:10px;width:0%;border-radius:10px"></div>
+</div>
+
+<hr>
+
+<h4>📅 Monthly Tracker</h4>
+<p id="monthlyGas"></p>
+
+<h4>⚡ Today</h4>
+<p id="todayRewards"></p>
+
+<h4>🔮 Prediction</h4>
+<p id="prediction"></p>
+
+<canvas id="rewardChart"></canvas>
+
 </div>
 </div>
 
-<!-- ANALYTICS -->
-<div id="analyticsTab" class="hidden">
-<canvas id="chart"></canvas>
+<!-- ELITE -->
+<div id="eliteTab" class="hidden">
+<div class="card">
+<div id="platformData"></div>
+<div id="riskData"></div>
+<div id="tradeHistory"></div>
+<div id="taxData"></div>
+<div id="insightData"></div>
+</div>
 </div>
 
 <!-- ALERTS -->
@@ -187,30 +192,25 @@ button {
 
 <script>
 
-// MENU TOGGLE
+// MENU
 function toggleMenu(){
-  document.getElementById("menu").classList.toggle("show");
+menu.classList.toggle("show");
 }
-
-// CLOSE MENU ON OUTSIDE CLICK
-document.addEventListener("click",(e)=>{
-  if(!e.target.closest(".menu") && !e.target.closest(".menu-btn")){
-    document.getElementById("menu").classList.remove("show");
-  }
-});
 
 // TAB
 function tab(id){
-["portfolioTab","geminiTab","analyticsTab","alertsTab","stakingTab","aiTab","liveTab"]
+["portfolioTab","rewardsTab","eliteTab","alertsTab","stakingTab","aiTab","liveTab"]
 .forEach(t=>document.getElementById(t).classList.add("hidden"));
 
 document.getElementById(id).classList.remove("hidden");
-document.getElementById("menu").classList.remove("show");
+menu.classList.remove("show");
 }
 
 // GLOBAL
 let GLOBAL_DATA={};
 let LIVE_PRICES={};
+let rewardHistory = JSON.parse(localStorage.getItem("rewardHistory")||"{}");
+let monthlyData = JSON.parse(localStorage.getItem("monthlyData")||"{}");
 
 // LOAD
 async function load(){
@@ -219,13 +219,17 @@ const r=await fetch("/sync");
 const d=await r.json();
 GLOBAL_DATA=d;
 localStorage.setItem("offlineData",JSON.stringify(d));
+
 renderPortfolio(d);
-renderGemini(d);
+renderRewards(d);
+renderElite(d);
+
 }catch{
 const d=JSON.parse(localStorage.getItem("offlineData"));
 if(d){
 renderPortfolio(d);
-renderGemini(d);
+renderRewards(d);
+renderElite(d);
 }
 }
 }
@@ -233,80 +237,132 @@ renderGemini(d);
 // PORTFOLIO
 function renderPortfolio(data){
 portfolio.innerHTML="";
-let total=0,profit=0;
+let total=0;
 
 data.trades?.forEach(t=>{
 const p=data.prices[t.coin]||0;
 const val=t.amount*p;
-const cost=t.amount*t.price;
-
 total+=val;
-profit+=val-cost;
 
-portfolio.innerHTML+=`
-<div class="card">
-<h3>${t.coin}</h3>
-<p>$${val.toFixed(2)}</p>
-<p>${(val-cost).toFixed(2)}</p>
-</div>`;
+portfolio.innerHTML+=`<div class="card">${t.coin} $${val.toFixed(2)}</div>`;
 });
 
 document.getElementById("total").innerText="$"+total.toFixed(2);
-document.getElementById("profit").innerText="$"+profit.toFixed(2);
 }
 
-// GEMINI
-function renderGemini(data){
-let rewards=0;
+// =====================
+// 💎 REWARDS SYSTEM
+// =====================
+function renderRewards(data){
+
+let gas=0,dining=0,grocery=0,other=0,totalRewards=0;
 
 data.transactions?.forEach(tx=>{
+const amt=Math.abs(parseFloat(tx.amount||0));
+const desc=(tx.description||"").toLowerCase();
+
+if(tx.type==="Debit"){
+if(desc.includes("gas")) gas+=amt;
+else if(desc.includes("food")) dining+=amt;
+else if(desc.includes("market")) grocery+=amt;
+else other+=amt;
+}
+
 if(tx.currency==="XRP" && tx.type==="Credit"){
-rewards+=parseFloat(tx.amount||0);
+totalRewards+=parseFloat(tx.amount||0);
 }
 });
 
-geminiStats.innerHTML=`💎 XRP Earned: ${rewards.toFixed(4)}`;
+// GEMINI LOGIC
+let gasEligible=Math.min(gas,300);
+let gasOverflow=Math.max(gas-300,0);
+
+const rewardsUSD=
+(gasEligible*0.04)+
+(gasOverflow*0.01)+
+(dining*0.03)+
+(grocery*0.02)+
+(other*0.01);
+
+const xrpPrice=data.prices["XRP"]||0;
+const estimatedXRP=xrpPrice?(rewardsUSD/xrpPrice):0;
+
+// UI
+rewardsList.innerHTML=`
+<p>Gas: $${gas.toFixed(2)}</p>
+<p>Dining: $${dining.toFixed(2)}</p>
+<p>Grocery: $${grocery.toFixed(2)}</p>
+<p>Other: $${other.toFixed(2)}</p>
+<hr>
+<p>Estimated: ${estimatedXRP.toFixed(4)} XRP</p>
+`;
+
+rewardTotal.innerText="Actual XRP: "+totalRewards.toFixed(4);
+
+// GAS BAR
+gasBar.style.width=Math.min((gas/300)*100,100)+"%";
+
+// =====================
+// 💀 MAX ENGINE
+// =====================
+
+const today=new Date().toISOString().split("T")[0];
+
+if(!rewardHistory[today]) rewardHistory[today]=0;
+rewardHistory[today]+=estimatedXRP;
+localStorage.setItem("rewardHistory",JSON.stringify(rewardHistory));
+
+// MONTH
+const key=new Date().getMonth();
+if(!monthlyData[key]) monthlyData[key]={gas:0};
+monthlyData[key].gas=gas;
+
+monthlyGas.innerText="Gas Used: $"+gas.toFixed(2)+"/300";
+todayRewards.innerText="Today: "+rewardHistory[today].toFixed(4)+" XRP";
+
+// PREDICTION
+const days=Object.keys(rewardHistory).length||1;
+const avg=Object.values(rewardHistory).reduce((a,b)=>a+b,0)/days;
+const projected=avg*30;
+
+prediction.innerText="Projected: "+projected.toFixed(2)+" XRP";
+
+// CHART
+const ctx=document.getElementById("rewardChart");
+new Chart(ctx,{
+type:"line",
+data:{
+labels:Object.keys(rewardHistory).slice(-7),
+datasets:[{data:Object.values(rewardHistory).slice(-7)}]
+}
+});
+}
+
+// =====================
+// 🧠 ELITE
+// =====================
+function renderElite(data){
+
+let cost=0,value=0;
+
+data.trades?.forEach(t=>{
+cost+=t.amount*t.price;
+value+=t.amount*(data.prices[t.coin]||0);
+});
+
+taxData.innerHTML=`PnL: $${(value-cost).toFixed(2)}`;
 }
 
 // LIVE XRP
-setInterval(async ()=>{
+setInterval(async()=>{
 const r=await fetch("https://api.coinbase.com/v2/exchange-rates?currency=USD");
 const d=await r.json();
 LIVE_PRICES.XRP=1/d.data.rates.XRP;
-renderLive();
+
+livePrices.innerHTML=`$${LIVE_PRICES.XRP.toFixed(2)}`;
 },2500);
 
-function renderLive(){
-livePrices.innerHTML=`
-<div class="card">
-<h3>XRP</h3>
-<p>$${LIVE_PRICES.XRP?.toFixed(2)||0}</p>
-</div>`;
-}
-
-// CHART
-let cd={labels:[],datasets:[{data:[]}]};
-new Chart(document.getElementById("liveChart"),{type:"line",data:cd});
-
-setInterval(()=>{
-if(LIVE_PRICES.XRP){
-cd.labels.push("");
-cd.datasets[0].data.push(LIVE_PRICES.XRP);
-if(cd.labels.length>20){
-cd.labels.shift();
-cd.datasets[0].data.shift();
-}
-}
-},2500);
-
-// CACHE + LOAD
-const cached=localStorage.getItem("offlineData");
-if(cached){
-const d=JSON.parse(cached);
-renderPortfolio(d);
-renderGemini(d);
-}
-
+// LOAD LOOP
 setInterval(load,5000);
 load();
 
