@@ -13,79 +13,69 @@
 <style>
 body {
   margin:0;
-  font-family:-apple-system;
-  background:radial-gradient(circle,#0a0a0a,#000);
+  font-family:-apple-system, BlinkMacSystemFont, sans-serif;
+  background:radial-gradient(circle at top,#0f0f0f,#000);
   color:white;
+  overflow-x:hidden;
   padding-bottom:90px;
 }
 
-/* SPLASH */
-#splash{
-position:fixed;
-width:100%;
-height:100%;
-background:#000;
-display:flex;
-align-items:center;
-justify-content:center;
-z-index:9999;
-animation:fadeOut 1s ease forwards;
-animation-delay:2.5s;
-}
-
-#logo{
-font-size:60px;
-color:#c084fc;
-text-shadow:0 0 30px #9333ea;
-animation:pulse 1.5s infinite;
-}
-
-/* HEADER */
 h1 {
   text-align:center;
+  font-size:28px;
+  margin:16px 0;
   color:#c084fc;
+  text-shadow:0 0 35px rgba(147,51,234,0.7);
 }
 
-/* CARD */
 .card {
-  background:rgba(20,20,20,0.6);
+  background:rgba(25,25,25,0.6);
   margin:12px;
   padding:16px;
-  border-radius:16px;
-  border:1px solid rgba(147,51,234,0.3);
+  border-radius:18px;
+  border:1px solid rgba(147,51,234,0.25);
+  backdrop-filter:blur(14px);
+  box-shadow:
+    0 4px 25px rgba(0,0,0,0.5),
+    0 0 20px rgba(147,51,234,0.2);
 }
 
-/* NAV */
+input {
+  width:100%;
+  padding:12px;
+  margin:6px 0;
+  border-radius:12px;
+  border:none;
+  background:#0f0f0f;
+  color:white;
+}
+
+button {
+  width:100%;
+  padding:12px;
+  border-radius:14px;
+  border:none;
+  background:linear-gradient(135deg,#9333ea,#6b21a8);
+  color:white;
+}
+
 .tabs {
   position:fixed;
   bottom:0;
   width:100%;
   display:flex;
-  background:#000;
+  background:rgba(0,0,0,0.9);
 }
 
 .tabs button { flex:1; }
 
-.hidden{display:none;}
+.hidden { display:none; }
 
-@keyframes pulse{
-0%{transform:scale(1);}
-50%{transform:scale(1.1);}
-100%{transform:scale(1);}
-}
-
-@keyframes fadeOut{
-to{opacity:0;visibility:hidden;}
-}
-
-#bg{position:fixed;z-index:-1;}
+#bg { position:fixed; z-index:-1; }
 </style>
 </head>
 
 <body>
-
-<!-- SPLASH -->
-<div id="splash"><div id="logo">999</div></div>
 
 <canvas id="bg"></canvas>
 
@@ -94,11 +84,18 @@ to{opacity:0;visibility:hidden;}
 <!-- PORTFOLIO -->
 <div id="portfolioTab">
 <div class="card">
+
 <input id="coin" placeholder="Coin">
 <input id="amount" placeholder="Amount">
 <input id="price" placeholder="Buy Price">
+
 <button onclick="addTrade()">Add Trade</button>
+
+<!-- 🔔 NOTIFICATION BUTTON (ADDED) -->
+<button onclick="enableNotifications()">Enable Notifications 🔔</button>
+
 </div>
+
 <div id="portfolio"></div>
 <h2 id="total"></h2>
 <h3 id="profit"></h3>
@@ -115,8 +112,8 @@ to{opacity:0;visibility:hidden;}
 <h3>💎 Rewards</h3>
 <div id="rewardsList"></div>
 <p id="rewardTotal"></p>
-<div style="background:#222;height:10px;">
-<div id="gasBar" style="background:#9333ea;height:10px;width:0%"></div>
+<div style="background:#222;height:10px;border-radius:10px;">
+<div id="gasBar" style="background:#9333ea;height:10px;width:0%;border-radius:10px"></div>
 </div>
 </div>
 </div>
@@ -124,33 +121,19 @@ to{opacity:0;visibility:hidden;}
 <!-- ELITE -->
 <div id="eliteTab" class="hidden">
 <div class="card">
-
 <div id="platformData"></div>
 <div id="riskData"></div>
 <div id="tradeHistory"></div>
 <div id="taxData"></div>
 <div id="insightData"></div>
-
-<!-- XRP UI -->
-<div id="xrpStats"></div>
-
-<div style="margin-top:10px;">
-<div style="font-size:12px;">XRP Dominance</div>
-<div style="background:#222;height:10px;">
-<div id="xrpBar" style="height:10px;width:0%;background:#9333ea"></div>
-</div>
-</div>
-
-<canvas id="rewardChart"></canvas>
-
 </div>
 </div>
 
 <!-- ALERTS -->
 <div id="alertsTab" class="hidden">
 <div class="card">
-<input id="alertCoin">
-<input id="alertPrice">
+<input id="alertCoin" placeholder="Coin">
+<input id="alertPrice" placeholder="Price">
 <button onclick="addAlert()">Set Alert</button>
 </div>
 </div>
@@ -158,8 +141,8 @@ to{opacity:0;visibility:hidden;}
 <!-- STAKING -->
 <div id="stakingTab" class="hidden">
 <div class="card">
-<input id="stakeCoin">
-<input id="stakeAmount">
+<input id="stakeCoin" placeholder="Coin">
+<input id="stakeAmount" placeholder="Amount">
 <button onclick="addStake()">Add Stake</button>
 </div>
 </div>
@@ -167,7 +150,7 @@ to{opacity:0;visibility:hidden;}
 <!-- AI -->
 <div id="aiTab" class="hidden">
 <div class="card">
-<h3>AI</h3>
+<h3>🤖 AI Insights</h3>
 <div id="aiBox"></div>
 </div>
 </div>
@@ -175,6 +158,7 @@ to{opacity:0;visibility:hidden;}
 <!-- LIVE -->
 <div id="liveTab" class="hidden">
 <div class="card">
+<h3>📡 Live Market</h3>
 <canvas id="liveChart"></canvas>
 </div>
 <div id="livePrices"></div>
@@ -194,138 +178,389 @@ to{opacity:0;visibility:hidden;}
 
 <script>
 
-// REMOVE SPLASH
-setTimeout(()=>{
-const s=document.getElementById("splash");
-if(s) s.style.display="none";
-},3000);
+// =====================
+// 🌐 GLOBAL STATE
+// =====================
+let GLOBAL_DATA = {};
+let LIVE_PRICES = {};
+let seenRewards = JSON.parse(localStorage.getItem("seenRewards") || "[]");
 
-// XRP MODE
-let LIVE_PRICES={};
-let rewardHistory=[];
-let seenRewards=[];
+// =====================
+// 🔔 NOTIFICATIONS
+// =====================
+async function enableNotifications(){
+  if(!("Notification" in window)){
+    alert("Not supported");
+    return;
+  }
 
-// LIVE XRP FIRST
+  const permission = await Notification.requestPermission();
+
+  if(permission === "granted"){
+    alert("Notifications ON 🔥");
+  }
+}
+
+function sendNotification(title, body){
+  if(Notification.permission === "granted"){
+    new Notification(title, {
+      body,
+      icon:"/icon-192.png"
+    });
+  }
+}
+
+// =====================
+// 📡 LOAD DATA (BACKEND)
+// =====================
+async function load(){
+  try{
+    const res = await fetch("/sync");
+    const data = await res.json();
+    GLOBAL_DATA = data;
+
+    renderPortfolio(data);
+    renderRewards(data);
+
+  }catch(e){
+    console.log("sync failed", e);
+  }
+}
+
+// =====================
+// 💰 PORTFOLIO
+// =====================
+function renderPortfolio(data){
+
+  let total = 0;
+  let profit = 0;
+
+  const container = document.getElementById("portfolio");
+  container.innerHTML = "";
+
+  data.trades?.forEach(t=>{
+    const price = data.prices[t.coin] || 0;
+    const value = t.amount * price;
+    const cost = t.amount * t.price;
+
+    total += value;
+    profit += value - cost;
+
+    container.innerHTML += `
+    <div class="card">
+      <h3>${t.coin}</h3>
+      <p>$${value.toFixed(2)}</p>
+      <p>${(value-cost).toFixed(2)}</p>
+    </div>`;
+  });
+
+  document.getElementById("total").innerText = "Total: $" + total.toFixed(2);
+  document.getElementById("profit").innerText = "Profit: $" + profit.toFixed(2);
+}
+
+// =====================
+// 💎 REWARDS
+// =====================
+function renderRewards(data){
+
+  if(!document.getElementById("rewardsList")) return;
+
+  let total = 0;
+  let html = "";
+
+  data.rewards?.forEach(r=>{
+    total += r.amount;
+    html += `<p>${r.coin}: ${r.amount}</p>`;
+  });
+
+  // AUTO XRP DETECTION
+  data.transactions?.forEach(tx=>{
+    if(tx.currency==="XRP" && tx.type==="Credit"){
+
+      const id = tx.txid || tx.timestamp || tx.amount;
+
+      if(!seenRewards.includes(id)){
+        seenRewards.push(id);
+        localStorage.setItem("seenRewards", JSON.stringify(seenRewards));
+
+        sendNotification("💎 XRP Reward", `+${tx.amount} XRP`);
+      }
+
+      total += parseFloat(tx.amount || 0);
+      html += `<p>🔥 XRP: ${tx.amount}</p>`;
+    }
+  });
+
+  document.getElementById("rewardsList").innerHTML = html;
+  document.getElementById("rewardTotal").innerText = "Total: " + total.toFixed(4);
+}
+
+// =====================
+// 🔘 BUTTON FIXES
+// =====================
+async function addTrade(){
+  await fetch("/trade",{
+    method:"POST",
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      coin:coin.value.toUpperCase(),
+      amount:+amount.value,
+      price:+price.value
+    })
+  });
+
+  load();
+}
+
+async function addAlert(){
+  await fetch("/alert",{
+    method:"POST",
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      coin:alertCoin.value.toUpperCase(),
+      price:+alertPrice.value
+    })
+  });
+
+  alert("Alert set 🔔");
+}
+
+async function addStake(){
+  await fetch("/stake",{
+    method:"POST",
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      coin:stakeCoin.value.toUpperCase(),
+      amount:+stakeAmount.value
+    })
+  });
+
+  alert("Stake added 🏦");
+}
+
+// =====================
+// 📡 LIVE PRICES
+// =====================
 setInterval(async ()=>{
-const res=await fetch("https://api.coinbase.com/v2/exchange-rates?currency=USD");
-const data=await res.json();
+  try{
+    const res = await fetch("https://api.coinbase.com/v2/exchange-rates?currency=USD");
+    const data = await res.json();
 
-["XRP","BTC","ETH"].forEach(c=>{
-LIVE_PRICES[c]=1/data.data.rates[c];
-});
+    ["BTC","ETH","XRP"].forEach(c=>{
+      LIVE_PRICES[c] = 1 / data.data.rates[c];
+    });
 
-renderLivePrices();
+    renderLivePrices();
 
+    checkAlerts();
+
+  }catch{}
 },2500);
 
 function renderLivePrices(){
-let html="";
-for(let c in LIVE_PRICES){
-html+=`<div class="card"><h3>${c}</h3><p>$${LIVE_PRICES[c].toFixed(4)}</p></div>`;
-}
-livePrices.innerHTML=html;
+  let html="";
+  for(let c in LIVE_PRICES){
+    html += `<div class="card"><h3>${c}</h3><p>$${LIVE_PRICES[c].toFixed(2)}</p></div>`;
+  }
+  document.getElementById("livePrices").innerHTML = html;
 }
 
-// XRP CHART
-let chartData={labels:[],datasets:[{label:"XRP",data:[]}]};
+// =====================
+// 🚨 ALERT CHECK
+// =====================
+function checkAlerts(){
 
-let chart;
+  GLOBAL_DATA.alerts?.forEach(a=>{
+    const price = LIVE_PRICES[a.coin];
+
+    if(price && price >= a.price){
+      sendNotification("🚨 Price Hit", `${a.coin} hit $${a.price}`);
+    }
+  });
+
+}
+
+// =====================
+// 📊 LIVE XRP CHART
+// =====================
+let chartData = {labels:[],datasets:[{data:[],tension:.4}]};
 
 function initLiveChart(){
-chart=new Chart(liveChart,{type:"line",data:chartData});
+  const ctx = document.getElementById("liveChart");
+  if(!ctx) return;
+
+  new Chart(ctx,{
+    type:"line",
+    data:chartData
+  });
 }
 
 setInterval(()=>{
-if(LIVE_PRICES["XRP"]){
-chartData.labels.push("");
-chartData.datasets[0].data.push(LIVE_PRICES["XRP"]);
+  if(LIVE_PRICES["XRP"]){
+    chartData.labels.push("");
+    chartData.datasets[0].data.push(LIVE_PRICES["XRP"]);
 
-if(chartData.labels.length>25){
-chartData.labels.shift();
-chartData.datasets[0].data.shift();
-}
-
-chart.update();
-}
+    if(chartData.labels.length > 20){
+      chartData.labels.shift();
+      chartData.datasets[0].data.shift();
+    }
+  }
 },2500);
 
 initLiveChart();
 
-// XRP ENGINE
-async function runXRPEngine(){
+// =====================
+// 🔁 AUTO LOAD
+// =====================
+setInterval(load, 5000);
+load();
 
-const res=await fetch("/sync");
-const data=await res.json();
-
-let total=0,xrp=0;
-
-data.balances?.forEach(b=>{
-total+=b.usdValue;
-if(b.currency==="XRP") xrp+=b.usdValue;
-});
-
-let dom = total ? (xrp/total)*100 : 0;
-
-xrpStats.innerHTML=`
-<p>$${xrp.toFixed(2)}</p>
-<p>${dom.toFixed(2)}%</p>
-`;
-
-xrpBar.style.width=dom+"%";
-
-// rewards
-let newR=0;
-data.transactions?.forEach(tx=>{
-if(tx.currency==="XRP"&&tx.type==="Credit"){
-newR+=parseFloat(tx.amount||0);
+// =====================
+// ⚙️ SERVICE WORKER
+// =====================
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("/service-worker.js");
 }
-});
+// =====================
+// 💀 LEVEL 2 NOTIFICATIONS SYSTEM
+// =====================
 
-rewardHistory.push(newR);
-if(rewardHistory.length>20) rewardHistory.shift();
+// SOUND (silent fallback if not allowed)
+const alertSound = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
 
-renderRewardChart();
+// cooldown system (prevents spam)
+let notifMemory = JSON.parse(localStorage.getItem("notifMemory") || "{}");
 
+function canNotify(key, cooldown = 30000){
+  const now = Date.now();
+
+  if(!notifMemory[key] || now - notifMemory[key] > cooldown){
+    notifMemory[key] = now;
+    localStorage.setItem("notifMemory", JSON.stringify(notifMemory));
+    return true;
+  }
+
+  return false;
 }
 
-function renderRewardChart(){
-new Chart(rewardChart,{
-type:"line",
-data:{labels:rewardHistory.map((_,i)=>i),
-datasets:[{data:rewardHistory}]}
-});
+// UPGRADED NOTIFICATION
+function sendSmartNotification(title, body, tag){
+
+  if(Notification.permission !== "granted") return;
+
+  // prevent spam
+  if(!canNotify(tag)) return;
+
+  // play sound
+  try { alertSound.play(); } catch {}
+
+  new Notification(title, {
+    body,
+    icon:"/icon-192.png",
+    badge:"/icon-192.png",
+    tag,
+    renotify:true
+  });
 }
 
-setInterval(runXRPEngine,6000);
+// =====================
+// 💎 REWARD NOTIFICATIONS (UPGRADE)
+// =====================
+function checkRewardNotifications(data){
 
-// PARTICLES
-const bg=document.getElementById("bg");
-const ctx=bg.getContext("2d");
+  data.transactions?.forEach(tx=>{
+    if(tx.currency === "XRP" && tx.type === "Credit"){
 
-bg.width=innerWidth;
-bg.height=innerHeight;
+      const id = tx.txid || tx.timestamp || tx.amount;
 
-let particles=Array.from({length:30},()=>({
-x:Math.random()*bg.width,
-y:Math.random()*bg.height,
-r:Math.random()*2,
-d:Math.random()*0.4
-}));
+      if(!seenRewards.includes(id)){
+        seenRewards.push(id);
+        localStorage.setItem("seenRewards", JSON.stringify(seenRewards));
 
-function draw(){
-ctx.clearRect(0,0,bg.width,bg.height);
-ctx.fillStyle="rgba(147,51,234,0.3)";
-particles.forEach(p=>{
-ctx.beginPath();
-ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
-ctx.fill();
-p.y+=p.d;
-if(p.y>bg.height)p.y=0;
-});
-requestAnimationFrame(draw);
+        sendSmartNotification(
+          "💎 XRP Reward",
+          `+${parseFloat(tx.amount).toFixed(4)} XRP received`,
+          "xrp-reward"
+        );
+      }
+    }
+  });
+
 }
-draw();
 
+// =====================
+// 🚨 PRICE ALERT UPGRADE
+// =====================
+function checkPriceNotifications(){
+
+  GLOBAL_DATA.alerts?.forEach(a=>{
+    const price = LIVE_PRICES[a.coin];
+
+    if(price && price >= a.price){
+
+      sendSmartNotification(
+        "🚨 Price Hit",
+        `${a.coin} reached $${price.toFixed(2)}`,
+        `price-${a.coin}`
+      );
+
+    }
+  });
+
+}
+
+// =====================
+// 💰 PROFIT ALERT SYSTEM
+// =====================
+function checkProfitNotifications(data){
+
+  let totalCost = 0;
+  let totalValue = 0;
+
+  data.trades?.forEach(t=>{
+    const price = data.prices[t.coin] || 0;
+
+    totalCost += t.amount * t.price;
+    totalValue += t.amount * price;
+  });
+
+  const profit = totalValue - totalCost;
+
+  // trigger every $100 gain
+  if(profit > 0){
+
+    const rounded = Math.floor(profit / 100) * 100;
+
+    if(rounded > 0){
+      sendSmartNotification(
+        "💰 Profit Milestone",
+        `You are up $${rounded}+`,
+        "profit"
+      );
+    }
+  }
+}
+
+// =====================
+// 🔁 HOOK INTO YOUR SYSTEM
+// =====================
+
+// extend your existing load()
+const originalLoad = load;
+
+load = async function(){
+  await originalLoad();
+
+  if(GLOBAL_DATA){
+    checkRewardNotifications(GLOBAL_DATA);
+    checkProfitNotifications(GLOBAL_DATA);
+  }
+};
+
+// extend live price loop
+setInterval(()=>{
+  checkPriceNotifications();
+}, 4000);
 </script>
 
 </body>
