@@ -8,18 +8,10 @@ app.use(cors());
 const PORT = process.env.PORT || 3000;
 
 /* =========================
-   FORMAT PRIVATE KEY
-========================= */
-function formatPrivateKey(key) {
-  if (!key) return "";
-  return key.includes("\\n") ? key.replace(/\\n/g, "\n").trim() : key.trim();
-}
-
-/* =========================
    ENV VARIABLES
 ========================= */
 const COINBASE_API_KEY = process.env.COINBASE_API_KEY;
-const COINBASE_PRIVATE_KEY = formatPrivateKey(process.env.COINBASE_PRIVATE_KEY);
+const COINBASE_PRIVATE_KEY = process.env.COINBASE_PRIVATE_KEY; // RAW base64
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_API_SECRET = process.env.GEMINI_API_SECRET;
@@ -67,7 +59,7 @@ async function getGeminiBalances() {
 }
 
 /* =========================
-   COINBASE (ED25519 FIX)
+   COINBASE (RAW ED25519 FIX)
 ========================= */
 async function getCoinbaseAccounts() {
   try {
@@ -77,11 +69,17 @@ async function getCoinbaseAccounts() {
 
     const message = timestamp + method + requestPath;
 
-    // ✅ ED25519 SIGNING
+    // 🔥 convert base64 → buffer
+    const privateKeyBuffer = Buffer.from(COINBASE_PRIVATE_KEY, "base64");
+
     const signature = crypto.sign(
       null,
       Buffer.from(message),
-      COINBASE_PRIVATE_KEY
+      {
+        key: privateKeyBuffer,
+        format: "der",
+        type: "pkcs8"
+      }
     ).toString("base64");
 
     const res = await fetch("https://api.coinbase.com" + requestPath, {
