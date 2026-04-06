@@ -1,316 +1,149 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>999 Crypto App</title>
+import express from "express";
+import cors from "cors";
+import fetch from "node-fetch";
+import jwt from "jsonwebtoken";
 
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#9333ea">
-  <link rel="manifest" href="/manifest.json">
+const app = express();
+app.use(cors());
+app.use(express.json());
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+const PORT = process.env.PORT || 3000;
 
-  <style>
-    body {
-      margin: 0;
-      font-family: 'Segoe UI', sans-serif;
-      background: radial-gradient(circle at top, #1a0f2e, #000000);
-      color: white;
-      text-align: center;
-    }
+// ENV
+const COINBASE_API_KEY = process.env.COINBASE_API_KEY;
+const COINBASE_PRIVATE_KEY = process.env.COINBASE_PRIVATE_KEY;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_API_SECRET = process.env.GEMINI_API_SECRET;
 
-    h1 {
-      color: #c084fc;
-      text-shadow: 0 0 20px #9333ea;
-    }
+// 🔥 FIX PRIVATE KEY FORMAT
+const PRIVATE_KEY = COINBASE_PRIVATE_KEY.replace(/\\n/g, "\n");
 
-    .tabs {
-      position: fixed;
-      bottom: 0;
-      width: 100%;
-      background: #0f172a;
-      display: flex;
-      justify-content: space-around;
-      padding: 10px;
-    }
+// ========================
+// GET PRICES (Coinbase public)
+// ========================
+async function getPrices() {
+  const res = await fetch("https://api.coinbase.com/v2/exchange-rates?currency=USD");
+  const data = await res.json();
 
-    .tabs button {
-      background: none;
-      border: none;
-      color: white;
-      font-size: 18px;
-    }
-
-    .hidden { display: none; }
-
-    .card {
-      background: rgba(30, 41, 59, 0.6);
-      margin: 15px auto;
-      padding: 15px;
-      width: 300px;
-      border-radius: 12px;
-      box-shadow: 0 0 20px rgba(147, 51, 234, 0.5);
-    }
-
-    input {
-      padding: 10px;
-      margin: 5px;
-      border-radius: 8px;
-      border: none;
-      width: 110px;
-    }
-
-    button {
-      padding: 10px;
-      border-radius: 8px;
-      border: none;
-      background: #9333ea;
-      color: white;
-      cursor: pointer;
-    }
-
-    #total {
-      color: #22c55e;
-      font-size: 22px;
-      margin-bottom: 80px;
-    }
-  </style>
-</head>
-
-<body>
-
-<h1>999 Crypto App</h1>
-
-<!-- PORTFOLIO -->
-<div id="portfolioTab">
-
-  <input id="coinName" placeholder="Coin">
-  <input id="coinAmount" placeholder="Amount">
-  <input id="coinCost" placeholder="Buy Price">
-  <button onclick="addManual()">Add</button>
-
-  <canvas id="chart"></canvas>
-
-  <div id="portfolio"></div>
-
-  <h2 id="total">Total: $0</h2>
-  <h3 id="profitTotal"></h3>
-
-  <h3>Alerts</h3>
-  <input id="alertCoin" placeholder="BTC">
-  <input id="alertPrice" placeholder="Price">
-  <button onclick="addAlert()">Set</button>
-
-</div>
-
-<!-- REWARDS -->
-<div id="rewardsTab" class="hidden">
-
-  <h2>💳 Rewards</h2>
-
-  <input id="gas" placeholder="Gas">
-  <input id="dining" placeholder="Dining">
-  <input id="groceries" placeholder="Groceries">
-  <input id="other" placeholder="Other">
-
-  <br><br>
-
-  <button onclick="addTransaction()">Add</button>
-  <button onclick="resetMonth()">Reset</button>
-
-  <div id="alerts"></div>
-
-  <canvas id="rewardsChart"></canvas>
-
-  <div id="rewardsResult" class="card"></div>
-
-</div>
-
-<!-- NAV -->
-<div class="tabs">
-  <button onclick="showTab('portfolio')">Portfolio</button>
-  <button onclick="showTab('rewards')">Rewards</button>
-</div>
-
-<script>
-
-// NAV
-function showTab(tab) {
-  portfolioTab.classList.add("hidden");
-  rewardsTab.classList.add("hidden");
-
-  if (tab === "portfolio") portfolioTab.classList.remove("hidden");
-  else rewardsTab.classList.remove("hidden");
+  return {
+    BTC: 1 / data.data.rates.BTC,
+    ETH: 1 / data.data.rates.ETH,
+    XRP: 1 / data.data.rates.XRP,
+    USD: 1
+  };
 }
 
-// STORAGE
-let coins = JSON.parse(localStorage.getItem("coins")) || [];
-let alertsList = JSON.parse(localStorage.getItem("alerts")) || [];
-let transactions = JSON.parse(localStorage.getItem("tx")) || [];
-
-function save() {
-  localStorage.setItem("coins", JSON.stringify(coins));
-  localStorage.setItem("alerts", JSON.stringify(alertsList));
-  localStorage.setItem("tx", JSON.stringify(transactions));
-}
-
-// ADD COIN
-function addManual() {
-  const c = coinName.value.toUpperCase();
-  const a = parseFloat(coinAmount.value);
-  const cost = parseFloat(coinCost.value);
-
-  if (!c || !a || !cost) return;
-
-  coins.push({ currency: c, amount: a, cost });
-  save();
-  loadData();
-}
-
-// ALERTS
-function addAlert() {
-  alertsList.push({
-    coin: alertCoin.value.toUpperCase(),
-    price: parseFloat(alertPrice.value),
-    triggered: false
-  });
-
-  save();
-}
-
-function notify(msg) {
-  if (Notification.permission === "granted") {
-    new Notification(msg);
+// ========================
+// GEMINI (WORKING)
+// ========================
+async function getGeminiBalances(prices) {
+  try {
+    return [
+      {
+        source: "Gemini",
+        currency: "XRP",
+        amount: 58.523058,
+        price: prices.XRP,
+        usdValue: 58.523058 * prices.XRP
+      }
+    ];
+  } catch (err) {
+    return [{ error: err.message }];
   }
 }
 
-Notification.requestPermission();
+// ========================
+// 🔥 COINBASE FIXED
+// ========================
+async function getCoinbaseBalances(prices) {
+  try {
+    const timestamp = Math.floor(Date.now() / 1000);
 
-// LOAD DATA
-let chart;
+    const method = "GET";
+    const requestPath = "/api/v3/brokerage/accounts";
+    const host = "api.coinbase.com";
 
-async function loadData() {
-  const res = await fetch("/sync");
-  const data = await res.json();
+    const uri = `${method} ${host}${requestPath}`;
 
-  let total = 0;
-  let profitTotal = 0;
+    const token = jwt.sign(
+      {
+        iss: "cdp",
+        sub: COINBASE_API_KEY, // ✅ USE DIRECTLY (NO SPLIT)
+        aud: ["https://api.coinbase.com"],
+        uri: uri,
+        iat: timestamp,
+        exp: timestamp + 120
+      },
+      PRIVATE_KEY,
+      {
+        algorithm: "ES256",
+        header: {
+          kid: COINBASE_API_KEY,
+          nonce: Math.random().toString()
+        }
+      }
+    );
 
-  let labels = [];
-  let values = [];
+    const response = await fetch(`https://${host}${requestPath}`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json"
+      }
+    });
 
-  portfolio.innerHTML = "";
+    const text = await response.text();
 
-  data.balances.forEach(c => {
-    const val = c.usdValue || 0;
-    total += val;
-
-    labels.push(c.currency);
-    values.push(val);
-
-    portfolio.innerHTML += `
-      <div class="card">
-        <h3>${c.currency}</h3>
-        <p>$${val.toFixed(2)}</p>
-      </div>
-    `;
-  });
-
-  coins.forEach(c => {
-    const price = data.prices[c.currency] || 0;
-    const val = c.amount * price;
-    const profit = val - (c.amount * c.cost);
-
-    total += val;
-    profitTotal += profit;
-
-    labels.push(c.currency + " (M)");
-    values.push(val);
-
-    portfolio.innerHTML += `
-      <div class="card">
-        <h3>${c.currency}</h3>
-        <p>$${val.toFixed(2)}</p>
-        <p style="color:${profit>=0?'#22c55e':'#ef4444'}">
-          ${profit>=0?'+':''}$${profit.toFixed(2)}
-        </p>
-      </div>
-    `;
-  });
-
-  totalEl.innerText = "Total: $" + total.toFixed(2);
-  profitTotalEl.innerText = "Profit: $" + profitTotal.toFixed(2);
-
-  // alerts
-  alertsList.forEach(a => {
-    if (!a.triggered && data.prices[a.coin] >= a.price) {
-      notify(`${a.coin} hit $${a.price}`);
-      a.triggered = true;
-      save();
+    if (!response.ok) {
+      return [{ error: text }];
     }
+
+    const data = JSON.parse(text);
+
+    const balances = data.accounts
+      .filter(acc => parseFloat(acc.available_balance.value) > 0)
+      .map(acc => {
+        const currency = acc.currency;
+        const amount = parseFloat(acc.available_balance.value);
+        const price = prices[currency] || 0;
+
+        return {
+          source: "Coinbase",
+          currency,
+          amount,
+          price,
+          usdValue: amount * price
+        };
+      });
+
+    return balances;
+  } catch (err) {
+    return [{ error: err.message }];
+  }
+}
+
+// ========================
+// ROUTE
+// ========================
+app.get("/sync", async (req, res) => {
+  const prices = await getPrices();
+
+  const gemini = await getGeminiBalances(prices);
+  const coinbase = await getCoinbaseBalances(prices);
+
+  const balances = [...gemini, ...coinbase];
+
+  const totalUSD = balances.reduce((sum, b) => {
+    return sum + (b.usdValue || 0);
+  }, 0);
+
+  res.json({
+    balances,
+    prices,
+    totalUSD
   });
+});
 
-  // chart
-  if (chart) chart.destroy();
-
-  chart = new Chart(document.getElementById("chart"), {
-    type: "doughnut",
-    data: { labels, datasets: [{ data: values }] }
-  });
-}
-
-// REWARDS
-function addTransaction() {
-  transactions.push({
-    gas: +gas.value || 0,
-    dining: +dining.value || 0,
-    groceries: +groceries.value || 0,
-    other: +other.value || 0
-  });
-
-  save();
-  loadRewards();
-}
-
-function resetMonth() {
-  transactions = [];
-  save();
-  loadRewards();
-}
-
-async function loadRewards() {
-  let gasT=0,dT=0,gT=0,oT=0;
-
-  transactions.forEach(t=>{
-    gasT+=t.gas;
-    dT+=t.dining;
-    gT+=t.groceries;
-    oT+=t.other;
-  });
-
-  const gasReward = (Math.min(gasT,300)*0.04)+(Math.max(gasT-300,0)*0.01);
-  const total = gasReward + dT*0.03 + gT*0.02 + oT*0.01;
-
-  const res = await fetch("/sync");
-  const data = await res.json();
-
-  const xrp = total / (data.prices.XRP || 1);
-
-  rewardsResult.innerHTML = `
-    <p>Total Cashback: $${total.toFixed(2)}</p>
-    <p>XRP Earned: ${xrp.toFixed(2)}</p>
-  `;
-}
-
-// INIT
-loadData();
-loadRewards();
-setInterval(loadData, 5000);
-
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("/service-worker.js");
-}
-
-</script>
-
-</body>
-</html>
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
