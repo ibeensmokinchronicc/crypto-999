@@ -12,10 +12,9 @@ const GEMINI_API_SECRET = process.env.GEMINI_API_SECRET;
 
 const COINBASE_API_KEY = process.env.COINBASE_API_KEY;
 
-// ✅ OPTION A + B HANDLING
 let COINBASE_PRIVATE_KEY = process.env.COINBASE_PRIVATE_KEY;
 
-// If Render stored it with \n → convert to real newlines
+// Fix \n issue if present
 if (COINBASE_PRIVATE_KEY && COINBASE_PRIVATE_KEY.includes("\\n")) {
   COINBASE_PRIVATE_KEY = COINBASE_PRIVATE_KEY.replace(/\\n/g, "\n");
 }
@@ -60,10 +59,16 @@ async function getGeminiBalances() {
   }
 }
 
-// ---------------- COINBASE (JWT FIXED) ----------------
+// ---------------- COINBASE (FINAL FIX) ----------------
 async function getCoinbaseAccounts() {
   try {
     const uri = "GET api.coinbase.com/api/v3/brokerage/accounts";
+
+    // 🔥 THIS FIXES YOUR EC KEY ISSUE
+    const PRIVATE_KEY_OBJ = crypto.createPrivateKey({
+      key: COINBASE_PRIVATE_KEY,
+      format: "pem"
+    });
 
     const token = jwt.sign(
       {
@@ -72,7 +77,7 @@ async function getCoinbaseAccounts() {
         aud: ["https://api.coinbase.com"],
         uri: uri
       },
-      COINBASE_PRIVATE_KEY,
+      PRIVATE_KEY_OBJ,
       {
         algorithm: "ES256",
         expiresIn: "120s"
@@ -104,11 +109,10 @@ async function getCoinbaseAccounts() {
   }
 }
 
-// ---------------- PRICES (COINBASE) ----------------
+// ---------------- PRICES ----------------
 async function getPrices() {
   try {
     const coins = ["BTC", "ETH", "XRP"];
-
     const prices = {};
 
     for (let coin of coins) {
@@ -128,7 +132,7 @@ async function getPrices() {
   }
 }
 
-// ---------------- MAIN ROUTE ----------------
+// ---------------- MAIN ----------------
 app.get("/sync", async (req, res) => {
   const gemini = await getGeminiBalances();
   const coinbase = await getCoinbaseAccounts();
