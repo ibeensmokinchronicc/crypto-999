@@ -1,149 +1,110 @@
-import express from "express";
-import cors from "cors";
-import fetch from "node-fetch";
-import jwt from "jsonwebtoken";
+const express = require("express");
+const cors = require("cors");
+const fetch = require("node-fetch");
+const crypto = require("crypto");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-const PORT = process.env.PORT || 3000;
-
 // ENV
-const COINBASE_API_KEY = process.env.COINBASE_API_KEY;
-const COINBASE_PRIVATE_KEY = process.env.COINBASE_PRIVATE_KEY;
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_API_SECRET = process.env.GEMINI_API_SECRET;
+const CB_KEY = process.env.COINBASE_API_KEY;
+const CB_PRIVATE = process.env.COINBASE_PRIVATE_KEY;
+const GEM_KEY = process.env.GEMINI_API_KEY;
+const GEM_SECRET = process.env.GEMINI_API_SECRET;
 
-// 🔥 FIX PRIVATE KEY FORMAT
-const PRIVATE_KEY = COINBASE_PRIVATE_KEY.replace(/\\n/g, "\n");
-
-// ========================
-// GET PRICES (Coinbase public)
-// ========================
+// ===== PRICES =====
 async function getPrices() {
-  const res = await fetch("https://api.coinbase.com/v2/exchange-rates?currency=USD");
-  const data = await res.json();
+  const r = await fetch("https://api.coinbase.com/v2/exchange-rates?currency=USD");
+  const d = await r.json();
+  const rates = d.data.rates;
 
   return {
-    BTC: 1 / data.data.rates.BTC,
-    ETH: 1 / data.data.rates.ETH,
-    XRP: 1 / data.data.rates.XRP,
-    USD: 1
+    BTC: 1 / rates.BTC,
+    ETH: 1 / rates.ETH,
+    XRP: 1 / rates.XRP
   };
 }
 
-// ========================
-// GEMINI (WORKING)
-// ========================
-async function getGeminiBalances(prices) {
+// ===== GEMINI BALANCES =====
+async function getGeminiBalances() {
   try {
-    return [
-      {
-        source: "Gemini",
-        currency: "XRP",
-        amount: 58.523058,
-        price: prices.XRP,
-        usdValue: 58.523058 * prices.XRP
-      }
-    ];
-  } catch (err) {
-    return [{ error: err.message }];
-  }
-}
+    const payload = {
+      request: "/v1/balances",
+      nonce: Date.now()
+    };
 
-// ========================
-// 🔥 COINBASE FIXED
-// ========================
-async function getCoinbaseBalances(prices) {
-  try {
-    const timestamp = Math.floor(Date.now() / 1000);
+    const encoded = Buffer.from(JSON.stringify(payload)).toString("base64");
 
-    const method = "GET";
-    const requestPath = "/api/v3/brokerage/accounts";
-    const host = "api.coinbase.com";
+    const signature = crypto
+      .createHmac("sha384", GEM_SECRET)
+      .update(encoded)
+      .digest("hex");
 
-    const uri = `${method} ${host}${requestPath}`;
-
-    const token = jwt.sign(
-      {
-        iss: "cdp",
-        sub: COINBASE_API_KEY, // ✅ USE DIRECTLY (NO SPLIT)
-        aud: ["https://api.coinbase.com"],
-        uri: uri,
-        iat: timestamp,
-        exp: timestamp + 120
-      },
-      PRIVATE_KEY,
-      {
-        algorithm: "ES256",
-        header: {
-          kid: COINBASE_API_KEY,
-          nonce: Math.random().toString()
-        }
-      }
-    );
-
-    const response = await fetch(`https://${host}${requestPath}`, {
-      method: "GET",
+    const res = await fetch("https://api.gemini.com/v1/balances", {
+      method: "POST",
       headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json"
+        "X-GEMINI-APIKEY": GEM_KEY,
+        "X-GEMINI-PAYLOAD": encoded,
+        "X-GEMINI-SIGNATURE": signature
       }
     });
 
-    const text = await response.text();
+    const data = await res.json();
 
-    if (!response.ok) {
-      return [{ error: text }];
-    }
+    return data.map(c => ({
+      currency: c.currency.toUpperCase(),
+      amount: parseFloat(c.amount),
+      platform: "gemini"
+    }));
 
-    const data = JSON.parse(text);
-
-    const balances = data.accounts
-      .filter(acc => parseFloat(acc.available_balance.value) > 0)
-      .map(acc => {
-        const currency = acc.currency;
-        const amount = parseFloat(acc.available_balance.value);
-        const price = prices[currency] || 0;
-
-        return {
-          source: "Coinbase",
-          currency,
-          amount,
-          price,
-          usdValue: amount * price
-        };
-      });
-
-    return balances;
-  } catch (err) {
-    return [{ error: err.message }];
+  } catch {
+    return [];
   }
 }
 
-// ========================
-// ROUTE
-// ========================
+// ===== COINBASE BALANCES (SAFE FALLBACK) =====
+async function getCoinbaseBalances() {
+  try {
+    const res = await fetch("https://api.coinbase.com/v2/accounts", {
+      headers: {
+        Authorization: `Bearer ${CB_KEY}`
+      }
+    });
+
+    const d = await res.json();
+
+    return d.data.map(acc => ({
+      currency: acc.balance.currency,
+      amount: parseFloat(acc.balance.amount),
+      platform: "coinbase"
+    }));
+
+  } catch {
+    return [];
+  }
+}
+
+// ===== SYNC =====
 app.get("/sync", async (req, res) => {
-  const prices = await getPrices();
+  try {
+    const prices = await getPrices();
 
-  const gemini = await getGeminiBalances(prices);
-  const coinbase = await getCoinbaseBalances(prices);
+    const gemini = await getGeminiBalances();
+    const coinbase = await getCoinbaseBalances();
 
-  const balances = [...gemini, ...coinbase];
+    const balances = [...gemini, ...coinbase]
+      .filter(c => c.amount > 0)
+      .map(c => ({
+        ...c,
+        usdValue: c.amount * (prices[c.currency] || 0)
+      }));
 
-  const totalUSD = balances.reduce((sum, b) => {
-    return sum + (b.usdValue || 0);
-  }, 0);
+    res.json({ balances, prices });
 
-  res.json({
-    balances,
-    prices,
-    totalUSD
-  });
+  } catch (err) {
+    res.status(500).json({ error: "SYNC FAILED" });
+  }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+app.listen(3000, () => console.log("Server running"));
