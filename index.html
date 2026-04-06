@@ -3,26 +3,27 @@
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>999 Crypto</title>
-
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/icon-192.png">
 
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 
 <style>
 body{
 margin:0;
 font-family:-apple-system;
-background:radial-gradient(circle,#0a0a0a,#000);
+background:radial-gradient(circle at top,#0f0f0f,#000);
 color:white;
-padding-bottom:90px;
+overflow-y:auto;
 }
 
 /* HEADER */
 h1{
 text-align:center;
 color:#c084fc;
-text-shadow:0 0 30px #9333ea;
+text-shadow:0 0 50px rgba(147,51,234,0.9);
 }
 
 /* MENU */
@@ -30,9 +31,11 @@ text-shadow:0 0 30px #9333ea;
 position:absolute;
 top:15px;
 right:15px;
-background:rgba(20,20,20,0.7);
-border-radius:12px;
+z-index:2000;
+background:rgba(30,30,30,0.7);
+border-radius:14px;
 padding:10px;
+backdrop-filter:blur(10px);
 }
 
 .menu{
@@ -43,60 +46,74 @@ background:rgba(20,20,20,0.95);
 border-radius:16px;
 padding:10px;
 display:none;
+z-index:2000;
+box-shadow:0 0 30px rgba(147,51,234,0.5);
 }
-
 .menu.show{display:block;}
 
 .menu button{
 width:100%;
 background:none;
 color:white;
-padding:10px;
+padding:12px;
+font-size:15px;
 }
 
 /* CARD */
 .card{
-background:rgba(25,25,25,0.6);
+background:rgba(30,30,30,0.6);
 margin:12px;
 padding:16px;
-border-radius:16px;
+border-radius:18px;
+border:1px solid rgba(147,51,234,0.3);
+backdrop-filter:blur(14px);
+box-shadow:
+0 4px 30px rgba(0,0,0,0.7),
+0 0 25px rgba(147,51,234,0.3);
+transition:.25s;
 }
+.card:active{transform:scale(.96);}
 
-/* INPUT */
-input{
+/* STATES */
+.profit{color:#22c55e;text-shadow:0 0 12px #22c55e;}
+.loss{color:#ef4444;text-shadow:0 0 12px #ef4444;}
+
+/* INPUT + BUTTON */
+input,button{
 width:100%;
 padding:12px;
-margin:6px 0;
-background:#111;
-color:white;
+margin-top:6px;
 border:none;
 border-radius:12px;
 }
-
-/* BUTTON */
 button{
 background:linear-gradient(135deg,#9333ea,#6b21a8);
-border:none;
 color:white;
-padding:12px;
-border-radius:12px;
-width:100%;
-margin-top:6px;
+font-weight:600;
 }
 
+/* TABS */
 .hidden{display:none;}
+.tab{
+position:absolute;
+width:100%;
+top:70px;
+}
 </style>
+
+
 </head>
+
 
 <body>
 
+
 <h1>999 Crypto 💀</h1>
 
-<button class="menu-btn" onclick="toggleMenu()">☰</button>
+
+☰
 
 <div id="menu" class="menu">
-<<div id="menu" class="menu">
-
 <button onclick="openTab('portfolioTab')">💰 Portfolio</button>
 <button onclick="openTab('analyticsTab')">📊 Analytics</button>
 <button onclick="openTab('rewardsTab')">💎 Rewards</button>
@@ -105,11 +122,13 @@ margin-top:6px;
 <button onclick="openTab('stakingTab')">🏦 Staking</button>
 <button onclick="openTab('aiTab')">🤖 AI</button>
 <button onclick="openTab('liveTab')">📡 Live</button>
-
 </div>
 
+
 <!-- PORTFOLIO -->
-<div id="portfolioTab">
+
+
+<div id="portfolioTab" class="tab">
 <div class="card">
 <input id="coin" placeholder="Coin">
 <input id="amount" placeholder="Amount">
@@ -119,352 +138,279 @@ margin-top:6px;
 </div>
 <div id="portfolio"></div>
 <h2 id="total"></h2>
-<h3 id="profit"></h3>
 </div>
 
-<!-- REWARDS -->
-<div id="rewardsTab" class="hidden">
-<div class="card">
-<h3>💎 Rewards</h3>
 
+<!-- ANALYTICS -->
+
+
+<div id="analyticsTab" class="tab hidden">
+<canvas id="chart"></canvas>
+</div>
+
+
+<!-- REWARDS -->
+
+
+<div id="rewardsTab" class="tab hidden">
+<div class="card">
+<h3>💎 Rewards Engine</h3>
 <div id="rewardsList"></div>
 <p id="rewardTotal"></p>
+
 
 <div style="background:#222;height:10px;border-radius:10px;">
 <div id="gasBar" style="background:#9333ea;height:10px;width:0%;border-radius:10px"></div>
 </div>
 
-<hr>
 
-<h4>📅 Monthly Tracker</h4>
 <p id="monthlyGas"></p>
-
-<h4>⚡ Today</h4>
 <p id="todayRewards"></p>
-
-<h4>🔮 Prediction</h4>
 <p id="prediction"></p>
 
-<canvas id="rewardChart"></canvas>
 
 </div>
 </div>
+
 
 <!-- ELITE -->
-<div id="eliteTab" class="hidden">
+
+
+<div id="eliteTab" class="tab hidden">
 <div class="card">
-<div id="platformData"></div>
-<div id="riskData"></div>
-<div id="tradeHistory"></div>
+<h3>🧠 Elite Dashboard</h3>
 <div id="taxData"></div>
-<div id="insightData"></div>
 </div>
 </div>
 
+
 <!-- ALERTS -->
-<div id="alertsTab" class="hidden">
+
+
+<div id="alertsTab" class="tab hidden">
 <div class="card">
-<input id="alertCoin">
-<input id="alertPrice">
+<input id="alertCoin" placeholder="Coin">
+<input id="alertPrice" placeholder="Price">
 <button onclick="addAlert()">Set Alert</button>
 </div>
 </div>
 
+
 <!-- STAKING -->
-<div id="stakingTab" class="hidden">
+
+
+<div id="stakingTab" class="tab hidden">
 <div class="card">
-<input id="stakeCoin">
-<input id="stakeAmount">
+<input id="stakeCoin" placeholder="Coin">
+<input id="stakeAmount" placeholder="Amount">
 <button onclick="addStake()">Add Stake</button>
 </div>
 </div>
 
+
 <!-- AI -->
-<div id="aiTab" class="hidden">
+
+
+<div id="aiTab" class="tab hidden">
 <div class="card">
-<div id="aiBox"></div>
+<div id="aiBox">🤖 AI Insights Coming Soon...</div>
 </div>
 </div>
 
+
 <!-- LIVE -->
-<div id="liveTab" class="hidden">
+
+
+<div id="liveTab" class="tab hidden">
 <div class="card">
 <canvas id="liveChart"></canvas>
 </div>
 <div id="livePrices"></div>
 </div>
 
+
 <script>
 
-// MENU
+// NAV
+let currentTab="portfolioTab";
 function toggleMenu(){
-  const menu = document.getElementById("menu");
-  menu.classList.toggle("show");
+document.getElementById("menu").classList.toggle("show");
 }
+function openTab(id){
+document.querySelectorAll(".tab").forEach(t=>t.classList.add("hidden"));
+document.getElementById(id).classList.remove("hidden");
+currentTab=id;
+if(navigator.vibrate) navigator.vibrate(10);
+toggleMenu();
 }
+
 // GLOBAL
 let GLOBAL_DATA={};
 let LIVE_PRICES={};
-let rewardHistory = JSON.parse(localStorage.getItem("rewardHistory")||"{}");
-let monthlyData = JSON.parse(localStorage.getItem("monthlyData")||"{}");
-let currentTab = "portfolioTab";
+let rewardHistory=JSON.parse(localStorage.getItem("rewardHistory")||"{}");
+let rewardChart;
 
-function openTab(id){
-
-  if(id === currentTab) return;
-
-  if(navigator.vibrate) navigator.vibrate(10);
-
-  const tabs = [
-    "portfolioTab",
-    "analyticsTab",
-    "rewardsTab",
-    "eliteTab",
-    "alertsTab",
-    "stakingTab",
-    "aiTab",
-    "liveTab"
-  ];
-
-  const current = document.getElementById(currentTab);
-  const next = document.getElementById(id);
-
-  const dir = tabs.indexOf(id) > tabs.indexOf(currentTab) ? -100 : 100;
-
-  next.style.transform = `translateX(${dir}%)`;
-  next.classList.remove("hidden");
-
-  setTimeout(()=>{
-    next.style.transition = "all .3s ease";
-    next.style.transform = "translateX(0)";
-    current.style.transform = `translateX(${dir*-1}%)`;
-  },10);
-
-  setTimeout(()=>{
-    current.classList.add("hidden");
-    current.style.transform = "";
-    next.style.transition = "";
-    currentTab = id;
-  },300);
-
-  toggleMenu();
-}
 // LOAD
 async function load(){
 try{
 const r=await fetch("/sync");
 const d=await r.json();
 GLOBAL_DATA=d;
-localStorage.setItem("offlineData",JSON.stringify(d));
 
 renderPortfolio(d);
 renderRewards(d);
 renderElite(d);
 
-}catch{
-const d=JSON.parse(localStorage.getItem("offlineData"));
-if(d){
-renderPortfolio(d);
-renderRewards(d);
-renderElite(d);
-}
-}
+}catch{}
 }
 
 // PORTFOLIO
 function renderPortfolio(data){
-portfolio.innerHTML="";
 let total=0;
-
+const el=document.getElementById("portfolio");
+el.innerHTML="";
 data.trades?.forEach(t=>{
-const p=data.prices[t.coin]||0;
-const val=t.amount*p;
+const val=t.amount*(data.prices[t.coin]||0);
 total+=val;
-
-portfolio.innerHTML+=`<div class="card">${t.coin} $${val.toFixed(2)}</div>`;
+el.innerHTML+=`<div class="card">${t.coin} $${val.toFixed(2)}</div>`;
 });
-
 document.getElementById("total").innerText="$"+total.toFixed(2);
 }
 
-// =====================
-// 💎 REWARDS SYSTEM
-// =====================
+// CATEGORY
+function categorize(tx){
+const d=(tx.description||"").toLowerCase();
+if(d.includes("gas")) return "gas";
+if(d.includes("food")) return "dining";
+if(d.includes("market")) return "grocery";
+return "other";
+}
+
+// REWARDS
 function renderRewards(data){
 
-let gas=0,dining=0,grocery=0,other=0,totalRewards=0;
+let totals={gas:0,dining:0,grocery:0,other:0};
+let totalRewards=0;
 
 data.transactions?.forEach(tx=>{
 const amt=Math.abs(parseFloat(tx.amount||0));
-const desc=(tx.description||"").toLowerCase();
-
-if(tx.type==="Debit"){
-if(desc.includes("gas")) gas+=amt;
-else if(desc.includes("food")) dining+=amt;
-else if(desc.includes("market")) grocery+=amt;
-else other+=amt;
-}
-
-if(tx.currency==="XRP" && tx.type==="Credit"){
-totalRewards+=parseFloat(tx.amount||0);
-}
+if(tx.type==="Debit") totals[categorize(tx)]+=amt;
+if(tx.currency==="XRP" && tx.type==="Credit") totalRewards+=parseFloat(tx.amount||0);
 });
 
-// GEMINI LOGIC
-let gasEligible=Math.min(gas,300);
-let gasOverflow=Math.max(gas-300,0);
-
 const rewardsUSD=
-(gasEligible*0.04)+
-(gasOverflow*0.01)+
-(dining*0.03)+
-(grocery*0.02)+
-(other*0.01);
+(Math.min(totals.gas,300)*0.04)+
+(Math.max(totals.gas-300,0)*0.01)+
+(totals.dining*0.03)+
+(totals.grocery*0.02)+
+(totals.other*0.01);
 
-const xrpPrice=data.prices["XRP"]||0;
-const estimatedXRP=xrpPrice?(rewardsUSD/xrpPrice):0;
+const xrp=data.prices["XRP"]||0;
+const est=xrp?(rewardsUSD/xrp):0;
 
-// UI
-rewardsList.innerHTML=`
-<p>Gas: $${gas.toFixed(2)}</p>
-<p>Dining: $${dining.toFixed(2)}</p>
-<p>Grocery: $${grocery.toFixed(2)}</p>
-<p>Other: $${other.toFixed(2)}</p>
-<hr>
-<p>Estimated: ${estimatedXRP.toFixed(4)} XRP</p>
+document.getElementById("rewardsList").innerHTML=`
+<div class="card">⛽ Gas $${totals.gas.toFixed(2)}</div>
+<div class="card">🍔 Dining $${totals.dining.toFixed(2)}</div>
+<div class="card">🛒 Grocery $${totals.grocery.toFixed(2)}</div>
+<div class="card">📦 Other $${totals.other.toFixed(2)}</div>
+<div class="card profit">💎 ${est.toFixed(4)} XRP</div>
 `;
 
-rewardTotal.innerText="Actual XRP: "+totalRewards.toFixed(4);
-
-// GAS BAR
-gasBar.style.width=Math.min((gas/300)*100,100)+"%";
-
-// =====================
-// 💀 MAX ENGINE
-// =====================
+document.getElementById("rewardTotal").innerText="💀 Real XRP: "+totalRewards.toFixed(4);
 
 const today=new Date().toISOString().split("T")[0];
-
-if(!rewardHistory[today]) rewardHistory[today]=0;
-rewardHistory[today]+=estimatedXRP;
+rewardHistory[today]=(rewardHistory[today]||0)+est;
 localStorage.setItem("rewardHistory",JSON.stringify(rewardHistory));
 
-// MONTH
-const key=new Date().getMonth();
-if(!monthlyData[key]) monthlyData[key]={gas:0};
-monthlyData[key].gas=gas;
+document.getElementById("monthlyGas").innerText=`Gas: $${totals.gas.toFixed(2)}/300`;
+document.getElementById("todayRewards").innerText=`Today: ${rewardHistory[today].toFixed(4)} XRP`;
 
-monthlyGas.innerText="Gas Used: $"+gas.toFixed(2)+"/300";
-todayRewards.innerText="Today: "+rewardHistory[today].toFixed(4)+" XRP";
+const avg=Object.values(rewardHistory).reduce((a,b)=>a+b,0)/(Object.keys(rewardHistory).length||1);
+document.getElementById("prediction").innerText=`Projected: ${(avg*30).toFixed(2)} XRP`;
 
-// PREDICTION
-const days=Object.keys(rewardHistory).length||1;
-const avg=Object.values(rewardHistory).reduce((a,b)=>a+b,0)/days;
-const projected=avg*30;
-
-prediction.innerText="Projected: "+projected.toFixed(2)+" XRP";
-
-// CHART
 const ctx=document.getElementById("rewardChart");
-new Chart(ctx,{
+if(ctx){
+if(rewardChart) rewardChart.destroy();
+rewardChart=new Chart(ctx,{
 type:"line",
 data:{
 labels:Object.keys(rewardHistory).slice(-7),
-datasets:[{data:Object.values(rewardHistory).slice(-7)}]
-}
-});
+datasets:[{data:Object.values(rewardHistory).slice(-7),tension:.4}]
 }
 
-// =====================
-// 🧠 ELITE
-// =====================
+
+
+// ELITE
 function renderElite(data){
-
 let cost=0,value=0;
-
 data.trades?.forEach(t=>{
 cost+=t.amount*t.price;
 value+=t.amount*(data.prices[t.coin]||0);
 });
-
-taxData.innerHTML=`PnL: $${(value-cost).toFixed(2)}`;
+const pnl=value-cost;
+document.getElementById("taxData").innerHTML=
+`<p class="${pnl>=0?'profit':'loss'}">PnL: $${pnl.toFixed(2)}</p>`;
 }
 
-// LIVE XRP
+// LIVE
+let liveChart;
+let liveData={labels:[],datasets:[{data:[]}]};
+
+function initChart(){
+const ctx=document.getElementById("liveChart");
+if(ctx) liveChart=new Chart(ctx,{type:"line",data:liveData});
+}
+
 setInterval(async()=>{
 const r=await fetch("https://api.coinbase.com/v2/exchange-rates?currency=USD");
 const d=await r.json();
+
 LIVE_PRICES.XRP=1/d.data.rates.XRP;
 
-livePrices.innerHTML=`$${LIVE_PRICES.XRP.toFixed(2)}`;
+document.getElementById("livePrices").innerHTML=`$${LIVE_PRICES.XRP.toFixed(2)}`;
+
+liveData.labels.push("");
+liveData.datasets[0].data.push(LIVE_PRICES.XRP);
+
+if(liveData.labels.length>20){
+liveData.labels.shift();
+liveData.datasets[0].data.shift();
+}
+
+if(liveChart) liveChart.update();
+
 },2500);
 
-// LOAD LOOP
+initChart();
+
+// ACTIONS
+async function addTrade(){
+await fetch("/trade",{method:"POST",headers:{'Content-Type':'application/json'},
+body:JSON.stringify({coin:coin.value.toUpperCase(),amount:+amount.value,price:+price.value})});
+load();
+}
+
+async function addAlert(){
+await fetch("/alert",{method:"POST",headers:{'Content-Type':'application/json'},
+body:JSON.stringify({coin:alertCoin.value.toUpperCase(),price:+alertPrice.value})});
+alert("Alert set 🔔");
+}
+
+async function addStake(){
+await fetch("/stake",{method:"POST",headers:{'Content-Type':'application/json'},
+body:JSON.stringify({coin:stakeCoin.value.toUpperCase(),amount:+stakeAmount.value})});
+alert("Stake added 🏦");
+}
+
+async function enableNotifications(){
+await Notification.requestPermission();
+}
+
+// LOOP
 setInterval(load,5000);
 load();
-function openTab(id){
-  if(id === currentTab) return;
 
-  const tabs = [
-    "portfolioTab",
-    "analyticsTab",
-    "rewardsTab",
-    "eliteTab",
-    "alertsTab",
-    "stakingTab",
-    "aiTab",
-    "liveTab"
-  ];
-
-  const current = document.getElementById(currentTab);
-  const next = document.getElementById(id);
-
-  const dir = tabs.indexOf(id) > tabs.indexOf(currentTab) ? -100 : 100;
-
-  next.style.transform = `translateX(${dir}%)`;
-  next.classList.remove("hidden");
-
-  setTimeout(()=>{
-    next.style.transition = "all .3s ease";
-    next.style.transform = "translateX(0)";
-    current.style.transform = `translateX(${dir*-1}%)`;
-  },10);
-
-  setTimeout(()=>{
-    current.classList.add("hidden");
-    current.style.transform = "";
-    next.style.transition = "";
-    currentTab = id;
-  },300);
-
-  toggleMenu();
-}
-  let startX = 0;
-
-document.addEventListener("touchstart", e=>{
-  startX = e.changedTouches[0].screenX;
-});
-
-document.addEventListener("touchend", e=>{
-  const diff = e.changedTouches[0].screenX - startX;
-
-  const tabs = [
-    "portfolioTab",
-    "analyticsTab",
-    "rewardsTab",
-    "eliteTab",
-    "alertsTab",
-    "stakingTab",
-    "aiTab",
-    "liveTab"
-  ];
-
-  let i = tabs.indexOf(currentTab);
-
-  if(diff > 60 && i > 0) openTab(tabs[i-1]);
-  if(diff < -60 && i < tabs.length-1) openTab(tabs[i+1]);
-});
 </script>
-  
 </body>
 </html>
+
