@@ -59,7 +59,7 @@ async function getGeminiBalances() {
 }
 
 /* =========================
-   COINBASE (RAW ED25519 FIX)
+   COINBASE (FINAL FIX)
 ========================= */
 async function getCoinbaseAccounts() {
   try {
@@ -69,17 +69,17 @@ async function getCoinbaseAccounts() {
 
     const message = timestamp + method + requestPath;
 
-    // 🔥 convert base64 → buffer
-    const privateKeyBuffer = Buffer.from(COINBASE_PRIVATE_KEY, "base64");
+    // 🔥 CREATE PROPER KEY OBJECT
+    const privateKey = crypto.createPrivateKey({
+      key: Buffer.from(COINBASE_PRIVATE_KEY, "base64"),
+      format: "der",
+      type: "pkcs8"
+    });
 
     const signature = crypto.sign(
       null,
       Buffer.from(message),
-      {
-        key: privateKeyBuffer,
-        format: "der",
-        type: "pkcs8"
-      }
+      privateKey
     ).toString("base64");
 
     const res = await fetch("https://api.coinbase.com" + requestPath, {
