@@ -8,14 +8,12 @@ app.use(cors());
 const PORT = process.env.PORT || 3000;
 
 /* =========================
-   FORMAT PRIVATE KEY (FIXED)
+   FORMAT PRIVATE KEY
 ========================= */
 function formatPrivateKey(key) {
   if (!key) return "";
 
-  // convert \n → real line breaks if needed
   let formatted = key.includes("\\n") ? key.replace(/\\n/g, "\n") : key;
-
   return formatted.trim();
 }
 
@@ -29,12 +27,10 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_API_SECRET = process.env.GEMINI_API_SECRET;
 
 /* =========================
-   GEMINI FETCH
+   GEMINI
 ========================= */
 async function getGeminiBalances() {
   try {
-    const url = "https://api.gemini.com/v1/balances";
-
     const payload = {
       request: "/v1/balances",
       nonce: Date.now().toString()
@@ -47,7 +43,7 @@ async function getGeminiBalances() {
       .update(payloadBase64)
       .digest("hex");
 
-    const res = await fetch(url, {
+    const res = await fetch("https://api.gemini.com/v1/balances", {
       method: "POST",
       headers: {
         "X-GEMINI-APIKEY": GEMINI_API_KEY,
@@ -62,17 +58,18 @@ async function getGeminiBalances() {
     return data
       .filter(c => parseFloat(c.amount) > 0)
       .map(c => ({
+        source: "Gemini",
         currency: c.currency,
-        amount: c.amount
+        amount: parseFloat(c.amount)
       }));
 
   } catch (err) {
-    return { error: err.message };
+    return [{ error: err.message }];
   }
 }
 
 /* =========================
-   COINBASE FETCH (FINAL FIX)
+   COINBASE (FIXED SIGNING)
 ========================= */
 async function getCoinbaseAccounts() {
   try {
@@ -104,55 +101,69 @@ async function getCoinbaseAccounts() {
 
     const text = await res.text();
 
-    // handle non-JSON response (like Unauthorized)
     if (!text.startsWith("{")) {
-      return { error: text };
+      return [{ error: text }];
     }
 
     const data = JSON.parse(text);
 
-    if (!data.accounts) return { error: data };
+    if (!data.accounts) return [{ error: data }];
 
     return data.accounts
       .filter(acc => parseFloat(acc.available_balance?.value || 0) > 0)
       .map(acc => ({
+        source: "Coinbase",
         currency: acc.currency,
-        amount: acc.available_balance.value
+        amount: parseFloat(acc.available_balance.value)
       }));
 
   } catch (err) {
-    return { error: err.message };
+    return [{ error: err.message }];
   }
 }
 
 /* =========================
-   PRICE FETCH (SAFE)
+   COINBASE PRICES (NEW)
 ========================= */
 async function getPrices() {
   try {
     const res = await fetch(
-      "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,ripple&vs_currencies=usd"
+      "https://api.coinbase.com/v2/exchange-rates?currency=USD"
     );
 
-    const text = await res.text();
+    const data = await res.json();
+    const rates = data?.data?.rates || {};
 
-    if (!text.startsWith("{")) {
-      return {
-        bitcoin: { usd: 0 },
-        ethereum: { usd: 0 },
-        ripple: { usd: 0 }
-      };
-    }
-
-    return JSON.parse(text);
+    return {
+      BTC: rates.BTC ? 1 / parseFloat(rates.BTC) : 0,
+      ETH: rates.ETH ? 1 / parseFloat(rates.ETH) : 0,
+      XRP: rates.XRP ? 1 / parseFloat(rates.XRP) : 0,
+      USD: 1
+    };
 
   } catch {
     return {
-      bitcoin: { usd: 0 },
-      ethereum: { usd: 0 },
-      ripple: { usd: 0 }
+      BTC: 0,
+      ETH: 0,
+      XRP: 0,
+      USD: 1
     };
   }
+}
+
+/* =========================
+   MERGE + USD CALC
+========================= */
+function attachUSDValues(balances, prices) {
+  return balances.map(asset => {
+    const price = prices[asset.currency] || 0;
+
+    return {
+      ...asset,
+      price,
+      usdValue: asset.amount * price
+    };
+  });
 }
 
 /* =========================
@@ -166,10 +177,16 @@ app.get("/sync", async (req, res) => {
       getPrices()
     ]);
 
+    const allBalances = [...gemini, ...coinbase];
+
+    const enriched = attachUSDValues(allBalances, prices);
+
+    const totalUSD = enriched.reduce((sum, a) => sum + (a.usdValue || 0), 0);
+
     res.json({
-      gemini,
-      coinbase,
-      prices
+      balances: enriched,
+      prices,
+      totalUSD
     });
 
   } catch (err) {
