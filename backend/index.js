@@ -1,24 +1,26 @@
-import express from "express";
-import cors from "cors";
-import crypto from "crypto";
+const express = require("express");
+const fetch = require("node-fetch");
+const crypto = require("crypto");
+const jwt = require("jsonwebtoken");
 
 const app = express();
-app.use(cors());
-
 const PORT = process.env.PORT || 3000;
 
-/* =========================
-   ENV VARIABLES
-========================= */
-const COINBASE_API_KEY = process.env.COINBASE_API_KEY;
-const COINBASE_PRIVATE_KEY = process.env.COINBASE_PRIVATE_KEY; // RAW base64
-
+// ENV
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_API_SECRET = process.env.GEMINI_API_SECRET;
 
-/* =========================
-   GEMINI BALANCES
-========================= */
+const COINBASE_API_KEY = process.env.COINBASE_API_KEY;
+
+// ✅ OPTION A + B HANDLING
+let COINBASE_PRIVATE_KEY = process.env.COINBASE_PRIVATE_KEY;
+
+// If Render stored it with \n → convert to real newlines
+if (COINBASE_PRIVATE_KEY && COINBASE_PRIVATE_KEY.includes("\\n")) {
+  COINBASE_PRIVATE_KEY = COINBASE_PRIVATE_KEY.replace(/\\n/g, "\n");
+}
+
+// ---------------- GEMINI ----------------
 async function getGeminiBalances() {
   try {
     const payload = {
@@ -26,31 +28,31 @@ async function getGeminiBalances() {
       nonce: Date.now().toString()
     };
 
-    const payloadBase64 = Buffer.from(JSON.stringify(payload)).toString("base64");
+    const encoded = Buffer.from(JSON.stringify(payload)).toString("base64");
 
     const signature = crypto
       .createHmac("sha384", GEMINI_API_SECRET)
-      .update(payloadBase64)
+      .update(encoded)
       .digest("hex");
 
     const res = await fetch("https://api.gemini.com/v1/balances", {
       method: "POST",
       headers: {
+        "Content-Type": "text/plain",
         "X-GEMINI-APIKEY": GEMINI_API_KEY,
-        "X-GEMINI-PAYLOAD": payloadBase64,
-        "X-GEMINI-SIGNATURE": signature,
-        "Content-Type": "text/plain"
+        "X-GEMINI-PAYLOAD": encoded,
+        "X-GEMINI-SIGNATURE": signature
       }
     });
 
     const data = await res.json();
 
     return data
-      .filter(c => parseFloat(c.amount) > 0)
-      .map(c => ({
+      .filter(asset => parseFloat(asset.amount) > 0)
+      .map(asset => ({
         source: "Gemini",
-        currency: c.currency,
-        amount: parseFloat(c.amount)
+        currency: asset.currency.toUpperCase(),
+        amount: parseFloat(asset.amount)
       }));
 
   } catch (err) {
@@ -58,47 +60,34 @@ async function getGeminiBalances() {
   }
 }
 
-/* =========================
-   COINBASE (FINAL FIX)
-========================= */
+// ---------------- COINBASE (JWT FIXED) ----------------
 async function getCoinbaseAccounts() {
   try {
-    const timestamp = Math.floor(Date.now() / 1000).toString();
-    const method = "GET";
-    const requestPath = "/api/v3/brokerage/accounts";
+    const uri = "GET api.coinbase.com/api/v3/brokerage/accounts";
 
-    const message = timestamp + method + requestPath;
+    const token = jwt.sign(
+      {
+        iss: "cdp",
+        sub: COINBASE_API_KEY,
+        aud: ["https://api.coinbase.com"],
+        uri: uri
+      },
+      COINBASE_PRIVATE_KEY,
+      {
+        algorithm: "ES256",
+        expiresIn: "120s"
+      }
+    );
 
-    // 🔥 CREATE PROPER KEY OBJECT
-    const privateKey = crypto.createPrivateKey({
-      key: Buffer.from(COINBASE_PRIVATE_KEY, "base64"),
-      format: "der",
-      type: "pkcs8"
-    });
-
-    const signature = crypto.sign(
-      null,
-      Buffer.from(message),
-      privateKey
-    ).toString("base64");
-
-    const res = await fetch("https://api.coinbase.com" + requestPath, {
-      method: method,
+    const res = await fetch("https://api.coinbase.com/api/v3/brokerage/accounts", {
+      method: "GET",
       headers: {
-        "CB-ACCESS-KEY": COINBASE_API_KEY,
-        "CB-ACCESS-SIGN": signature,
-        "CB-ACCESS-TIMESTAMP": timestamp,
+        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json"
       }
     });
 
-    const text = await res.text();
-
-    if (!text.startsWith("{")) {
-      return [{ error: text }];
-    }
-
-    const data = JSON.parse(text);
+    const data = await res.json();
 
     if (!data.accounts) return [{ error: data }];
 
@@ -115,95 +104,63 @@ async function getCoinbaseAccounts() {
   }
 }
 
-/* =========================
-   COINBASE PRICES
-========================= */
+// ---------------- PRICES (COINBASE) ----------------
 async function getPrices() {
   try {
-    const res = await fetch(
-      "https://api.coinbase.com/v2/exchange-rates?currency=USD"
-    );
+    const coins = ["BTC", "ETH", "XRP"];
 
-    const data = await res.json();
-    const rates = data?.data?.rates || {};
+    const prices = {};
 
-    return {
-      BTC: rates.BTC ? 1 / parseFloat(rates.BTC) : 0,
-      ETH: rates.ETH ? 1 / parseFloat(rates.ETH) : 0,
-      XRP: rates.XRP ? 1 / parseFloat(rates.XRP) : 0,
-      USD: 1
-    };
+    for (let coin of coins) {
+      const res = await fetch(
+        `https://api.coinbase.com/v2/prices/${coin}-USD/spot`
+      );
+      const data = await res.json();
+      prices[coin] = parseFloat(data.data.amount);
+    }
 
-  } catch {
-    return {
-      BTC: 0,
-      ETH: 0,
-      XRP: 0,
-      USD: 1
-    };
-  }
-}
+    prices["USD"] = 1;
 
-/* =========================
-   ATTACH USD VALUES
-========================= */
-function attachUSDValues(balances, prices) {
-  return balances.map(asset => {
-    if (asset.error) return asset;
-
-    const price = prices[asset.currency] || 0;
-
-    return {
-      ...asset,
-      price,
-      usdValue: asset.amount * price
-    };
-  });
-}
-
-/* =========================
-   MAIN ROUTE
-========================= */
-app.get("/sync", async (req, res) => {
-  try {
-    const [gemini, coinbase, prices] = await Promise.all([
-      getGeminiBalances(),
-      getCoinbaseAccounts(),
-      getPrices()
-    ]);
-
-    const allBalances = [...gemini, ...coinbase];
-
-    const enriched = attachUSDValues(allBalances, prices);
-
-    const totalUSD = enriched.reduce((sum, a) => {
-      return sum + (a.usdValue || 0);
-    }, 0);
-
-    res.json({
-      balances: enriched,
-      prices,
-      totalUSD
-    });
+    return prices;
 
   } catch (err) {
-    res.status(500).json({
-      error: "Sync failed",
-      details: err.message
-    });
+    return { error: err.message };
   }
+}
+
+// ---------------- MAIN ROUTE ----------------
+app.get("/sync", async (req, res) => {
+  const gemini = await getGeminiBalances();
+  const coinbase = await getCoinbaseAccounts();
+  const prices = await getPrices();
+
+  const balances = [...gemini, ...coinbase];
+
+  let totalUSD = 0;
+
+  const enriched = balances.map(b => {
+    if (b.error) return b;
+
+    const price = prices[b.currency] || 0;
+    const usdValue = b.amount * price;
+
+    totalUSD += usdValue;
+
+    return {
+      ...b,
+      price,
+      usdValue
+    };
+  });
+
+  res.json({
+    balances: enriched,
+    prices,
+    totalUSD
+  });
 });
 
-/* =========================
-   ROOT
-========================= */
-app.get("/", (req, res) => {
-  res.send("Crypto 999 backend running 🚀");
-});
-
-/* =========================
-   START SERVER
-========================= */
+// ---------------- START ----------------
 app.listen(PORT, () => {
-  console.log("Server running on port " + PORT);
+  console.log(`Server running on port ${PORT}`);
 });
