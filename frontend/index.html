@@ -1,8 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>999 Crypto App</title>
-
+  <title>999 Crypto</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#9333ea">
 
@@ -15,229 +14,210 @@
   <style>
     body {
       margin: 0;
-      font-family: 'Segoe UI', sans-serif;
-      background: radial-gradient(circle at center, #0a0a0a, #000000);
+      font-family: Arial;
+      background: black;
       color: white;
       text-align: center;
-      overflow-x: hidden;
-    }
-
-    canvas#bg {
-      position: fixed;
-      top: 0;
-      left: 0;
-      z-index: -1;
-    }
-
-    #splash {
-      position: fixed;
-      width: 100%;
-      height: 100%;
-      background: black;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 9999;
-      animation: fadeOut 2.5s forwards;
-      animation-delay: 2s;
-    }
-
-    #logo {
-      width: 160px;
-      animation: glow 2s infinite alternate, zoom 1.5s ease;
-    }
-
-    @keyframes glow {
-      from { filter: drop-shadow(0 0 10px #9333ea); }
-      to { filter: drop-shadow(0 0 40px #9333ea); }
-    }
-
-    @keyframes zoom {
-      from { transform: scale(0.7); opacity: 0; }
-      to { transform: scale(1); opacity: 1; }
-    }
-
-    @keyframes fadeOut {
-      to { opacity: 0; visibility: hidden; }
     }
 
     h1 {
-      color: #b026ff;
-      text-shadow: 0 0 20px #9333ea, 0 0 40px #6b21a8;
+      color: #9333ea;
+      text-shadow: 0 0 20px #9333ea;
     }
 
     .card {
-      background: rgba(20,20,20,0.85);
-      margin: 15px auto;
-      padding: 15px;
-      width: 300px;
-      border-radius: 14px;
-      border: 1px solid rgba(147,51,234,0.3);
-      box-shadow: 0 0 15px rgba(147,51,234,0.4);
+      background: #111;
+      margin: 10px auto;
+      padding: 12px;
+      width: 320px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px #9333ea;
     }
 
-    input {
+    input, button {
       padding: 10px;
       margin: 5px;
       border-radius: 10px;
-      border: 1px solid #9333ea;
-      background: black;
-      color: white;
+      border: none;
     }
 
     button {
-      padding: 10px;
-      border-radius: 10px;
-      border: none;
-      background: linear-gradient(135deg, #9333ea, #6b21a8);
+      background: #9333ea;
       color: white;
     }
 
-    .tabs {
-      position: fixed;
-      bottom: 0;
-      width: 100%;
-      background: rgba(10,10,10,0.9);
-      border-top: 1px solid #9333ea;
-      display: flex;
-      justify-content: space-around;
-      padding: 12px;
+    #offlineBanner {
+      background: red;
+      padding: 5px;
+      display: none;
     }
 
-    .hidden { display: none; }
+    .profit { color: lime; }
+    .loss { color: red; }
   </style>
 </head>
 
 <body>
 
-<!-- SPLASH -->
-<div id="splash">
-  <img src="/icon-512.png" id="logo">
+<div id="offlineBanner">OFFLINE MODE</div>
+
+<h1>999 Crypto</h1>
+
+<!-- TRADE INPUT -->
+<div class="card">
+  <input id="coin" placeholder="Coin (XRP)">
+  <input id="amount" placeholder="Amount">
+  <input id="price" placeholder="Buy Price">
+  <select id="platform">
+    <option value="manual">Manual</option>
+    <option value="coinbase">Coinbase</option>
+    <option value="gemini">Gemini</option>
+  </select>
+  <button onclick="addTrade()">Add Trade</button>
 </div>
 
-<canvas id="bg"></canvas>
+<!-- PORTFOLIO -->
+<div id="portfolio"></div>
+<h2 id="total"></h2>
+<h3 id="profit"></h3>
 
-<h1>999 Crypto App</h1>
-
-<div id="portfolioTab">
-
-  <input id="coinName" placeholder="Coin">
-  <input id="coinAmount" placeholder="Amount">
-  <input id="coinCost" placeholder="Buy Price">
-  <button onclick="addManual()">Add</button>
-
-  <canvas id="chart"></canvas>
-
-  <div id="portfolio"></div>
-  <h2 id="total"></h2>
-  <h3 id="profitTotal"></h3>
-
+<!-- REWARDS -->
+<div class="card">
+  <h3>Rewards (XRP)</h3>
+  <p id="rewards"></p>
 </div>
 
-<div class="tabs">
-  <button onclick="showTab('portfolio')">Portfolio</button>
+<!-- ALERT -->
+<div class="card">
+  <input id="alertPrice" placeholder="XRP Alert Price">
+  <button onclick="setAlert()">Set Alert</button>
 </div>
+
+<!-- CHARTS -->
+<canvas id="chart"></canvas>
+<canvas id="historyChart"></canvas>
+
+<!-- INSIGHTS -->
+<h3 id="insights"></h3>
 
 <script>
 
-// PARTICLES
-const canvas = document.getElementById("bg");
-const ctx = canvas.getContext("2d");
+let trades = JSON.parse(localStorage.getItem("trades")) || [];
+let history = JSON.parse(localStorage.getItem("history")) || [];
+let alerts = JSON.parse(localStorage.getItem("alerts")) || {};
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+function saveAll() {
+  localStorage.setItem("trades", JSON.stringify(trades));
+  localStorage.setItem("history", JSON.stringify(history));
+  localStorage.setItem("alerts", JSON.stringify(alerts));
+}
 
-let particles = Array.from({length:50},()=>({
-  x:Math.random()*canvas.width,
-  y:Math.random()*canvas.height,
-  r:Math.random()*2,
-  d:Math.random()*1
-}));
-
-function drawParticles(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  ctx.fillStyle="rgba(147,51,234,0.6)";
-  particles.forEach(p=>{
-    ctx.beginPath();
-    ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
-    ctx.fill();
-    p.y+=p.d;
-    if(p.y>canvas.height)p.y=0;
+function addTrade() {
+  trades.push({
+    coin: coin.value.toUpperCase(),
+    amount: +amount.value,
+    price: +price.value,
+    platform: platform.value
   });
-  requestAnimationFrame(drawParticles);
-}
-drawParticles();
-
-// STORAGE
-let coins = JSON.parse(localStorage.getItem("coins")) || [];
-
-function save(){
-  localStorage.setItem("coins",JSON.stringify(coins));
+  saveAll();
+  load();
 }
 
-// ADD COIN
-function addManual(){
-  coins.push({
-    currency:coinName.value.toUpperCase(),
-    amount:+coinAmount.value,
-    cost:+coinCost.value
-  });
-  save();
-  loadData();
+function setAlert() {
+  alerts.XRP = +alertPrice.value;
+  saveAll();
 }
 
-// LOAD
-let chart;
+async function load() {
+  let data;
 
-async function loadData(){
-  const res = await fetch("/sync");
-  const data = await res.json();
+  try {
+    const res = await fetch("/sync");
+    data = await res.json();
+  } catch {
+    const cache = await caches.open("crypto-final");
+    const cached = await cache.match("/sync");
+    if (cached) data = await cached.json();
+    else return;
+  }
 
-  let total=0, profitTotal=0;
-  let labels=[], values=[];
+  let total = 0, profit = 0;
+  let labels = [], values = [];
 
-  portfolio.innerHTML="";
+  portfolio.innerHTML = "";
 
-  coins.forEach(c=>{
-    const price = data.prices[c.currency]||0;
-    const val = c.amount*price;
-    const profit = val-(c.amount*c.cost);
+  trades.forEach(t => {
+    const p = data.prices[t.coin] || 0;
+    const val = t.amount * p;
+    const cost = t.amount * t.price;
 
-    total+=val;
-    profitTotal+=profit;
+    total += val;
+    profit += val - cost;
 
-    labels.push(c.currency);
+    labels.push(t.coin);
     values.push(val);
 
-    portfolio.innerHTML+=`
+    portfolio.innerHTML += `
       <div class="card">
-        <h3>${c.currency}</h3>
+        <h3>${t.coin} (${t.platform})</h3>
         <p>$${val.toFixed(2)}</p>
-        <p style="color:${profit>=0?'#22c55e':'#ef4444'}">
-          ${profit>=0?'+':''}$${profit.toFixed(2)}
+        <p class="${val-cost>=0?'profit':'loss'}">
+          ${(val-cost).toFixed(2)}
         </p>
       </div>
     `;
   });
 
-  total.innerText="Total: $"+total.toFixed(2);
-  profitTotal.innerText="Profit: $"+profitTotal.toFixed(2);
+  total.innerText = "Total: $" + total.toFixed(2);
+  profitEl.innerText = "Profit: $" + profit.toFixed(2);
 
-  if(chart) chart.destroy();
-  chart = new Chart(chartCanvas,{type:"doughnut",data:{labels,datasets:[{data:values}]}})
+  // HISTORY
+  history.push({ time: Date.now(), value: total });
+  if (history.length > 50) history.shift();
+
+  // ALERT
+  if (alerts.XRP && data.prices.XRP >= alerts.XRP) {
+    alert("XRP hit your target!");
+  }
+
+  // REWARDS (simple auto detect)
+  const xrp = trades.filter(t => t.coin === "XRP");
+  rewards.innerText = xrp.length + " XRP reward entries";
+
+  saveAll();
+
+  new Chart(chart, {
+    type: "doughnut",
+    data: { labels, datasets: [{ data: values }] }
+  });
+
+  new Chart(historyChart, {
+    type: "line",
+    data: {
+      labels: history.map(h => new Date(h.time).toLocaleTimeString()),
+      datasets: [{ data: history.map(h => h.value) }]
+    }
+  });
+
+  insights.innerText =
+    history.length > 1 && history.at(-1).value > history.at(-2).value
+    ? "📈 Uptrend"
+    : "📉 Downtrend";
 }
 
-// INIT
-loadData();
-setInterval(loadData,5000);
+// OFFLINE
+function status() {
+  offlineBanner.style.display = navigator.onLine ? "none" : "block";
+}
 
-// SPLASH REMOVE
-window.onload=()=>setTimeout(()=>{
-  splash.style.display="none";
-},3000);
+window.addEventListener("online", load);
+window.addEventListener("offline", status);
+
+status();
+load();
 
 // SW
-if("serviceWorker" in navigator){
+if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/service-worker.js");
 }
 
