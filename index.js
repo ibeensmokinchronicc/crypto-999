@@ -11,6 +11,9 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 
+// =====================
+// 💾 DATABASE
+// =====================
 const db = new Low(new JSONFile("db.json"), {
   trades: [],
   alerts: [],
@@ -19,22 +22,32 @@ const db = new Low(new JSONFile("db.json"), {
 });
 
 await db.read();
+db.data ||= { trades: [], alerts: [], staking: [], rewards: [] };
 
-// PRICE ENGINE
+// =====================
+// 💲 PRICE ENGINE
+// =====================
 async function getPrices() {
-  const r = await fetch("https://api.coinbase.com/v2/exchange-rates?currency=USD");
-  const d = await r.json();
-  const rates = d.data.rates;
+  try {
+    const r = await fetch("https://api.coinbase.com/v2/exchange-rates?currency=USD");
+    const d = await r.json();
+    const rates = d.data.rates;
 
-  const map = {};
-  Object.keys(rates).forEach(c => {
-    map[c] = 1 / rates[c];
-  });
+    const map = {};
+    Object.keys(rates).forEach(c => {
+      map[c] = 1 / rates[c];
+    });
 
-  return map;
+    return map;
+
+  } catch {
+    return {};
+  }
 }
 
-// GEMINI FULL DATA (BALANCES + TRANSACTIONS)
+// =====================
+// 💎 GEMINI (BALANCES + TRANSACTIONS)
+// =====================
 async function getGeminiData() {
   try {
     const payload = {
@@ -68,7 +81,7 @@ async function getGeminiData() {
         platform: "gemini"
       }));
 
-    // TRANSACTIONS (for rewards)
+    // TRANSACTIONS
     const txPayload = {
       request: "/v1/mytrades",
       nonce: Date.now()
@@ -106,11 +119,15 @@ async function getGeminiData() {
   }
 }
 
-// COINBASE
+// =====================
+// 🪙 COINBASE
+// =====================
 async function getCoinbaseBalances() {
   try {
     const res = await fetch("https://api.coinbase.com/v2/accounts", {
-      headers: { Authorization: `Bearer ${process.env.COINBASE_API_KEY}` }
+      headers: {
+        Authorization: `Bearer ${process.env.COINBASE_API_KEY}`
+      }
     });
 
     const d = await res.json();
@@ -126,7 +143,9 @@ async function getCoinbaseBalances() {
   }
 }
 
-// SYNC (LOCKED)
+// =====================
+// 🔄 SYNC (MAIN ENGINE)
+// =====================
 app.get("/sync", async (req, res) => {
   try {
     const prices = await getPrices();
@@ -150,10 +169,95 @@ app.get("/sync", async (req, res) => {
     });
 
   } catch {
-    res.json({ balances: [], prices: {}, transactions: [] });
+    res.json({
+      balances: [],
+      prices: {},
+      transactions: [],
+      trades: [],
+      alerts: [],
+      staking: [],
+      rewards: []
+    });
   }
 });
 
+// =====================
+// ➕ ADD TRADE
+// =====================
+app.post("/trade", async (req, res) => {
+  const { coin, amount, price } = req.body;
+
+  db.data.trades.push({
+    coin,
+    amount,
+    price,
+    timestamp: Date.now()
+  });
+
+  await db.write();
+  res.json({ ok: true });
+});
+
+// =====================
+// 🔔 ALERTS
+// =====================
+app.post("/alert", async (req, res) => {
+  const { coin, price } = req.body;
+
+  db.data.alerts.push({
+    coin,
+    price,
+    created: Date.now()
+  });
+
+  await db.write();
+  res.json({ ok: true });
+});
+
+// =====================
+// 🏦 STAKING
+// =====================
+app.post("/stake", async (req, res) => {
+  const { coin, amount } = req.body;
+
+  db.data.staking.push({
+    coin,
+    amount,
+    timestamp: Date.now()
+  });
+
+  await db.write();
+  res.json({ ok: true });
+});
+
+// =====================
+// 💎 MANUAL REWARDS
+// =====================
+app.post("/reward", async (req, res) => {
+  const { coin, amount } = req.body;
+
+  db.data.rewards.push({
+    coin,
+    amount,
+    timestamp: Date.now()
+  });
+
+  await db.write();
+  res.json({ ok: true });
+});
+
+// =====================
+// ❤️ HEALTH CHECK
+// =====================
+app.get("/health", (req, res) => {
+  res.json({ status: "ok", time: Date.now() });
+});
+
+// =====================
+// 🌐 STATIC
+// =====================
 app.use(express.static("."));
 
-app.listen(PORT, () => console.log("💀 SYSTEM LOCKED"));
+// =====================
+// 🚀 START
+//
