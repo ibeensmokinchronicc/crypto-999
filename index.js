@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import fetch from "node-fetch";
 import crypto from "crypto";
+import jwt from "jsonwebtoken";
 import { Low } from "lowdb";
 import { JSONFile } from "lowdb/node";
 
@@ -11,9 +12,9 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 
+// DB
 const db = new Low(new JSONFile("db.json"), {
   trades: [],
-  history: [],
   alerts: [],
   staking: [],
   rewards: []
@@ -21,11 +22,16 @@ const db = new Low(new JSONFile("db.json"), {
 
 await db.read();
 
-const CB_KEY = process.env.COINBASE_API_KEY;
+// ENV
 const GEM_KEY = process.env.GEMINI_API_KEY;
 const GEM_SECRET = process.env.GEMINI_API_SECRET;
 
-// ===== PRICE ENGINE =====
+const CB_KEY = process.env.COINBASE_API_KEY;
+const CB_PRIVATE_KEY = process.env.COINBASE_PRIVATE_KEY;
+
+// =====================
+// 💰 PRICE ENGINE
+// =====================
 async function getPrices() {
   const r = await fetch("https://api.coinbase.com/v2/exchange-rates?currency=USD");
   const d = await r.json();
@@ -39,7 +45,27 @@ async function getPrices() {
   return map;
 }
 
-// ===== GEMINI =====
+// =====================
+// 🔐 GEMINI AUTH
+// =====================
+function geminiHeaders(payload) {
+  const encoded = Buffer.from(JSON.stringify(payload)).toString("base64");
+
+  const signature = crypto
+    .createHmac("sha384", GEM_SECRET)
+    .update(encoded)
+    .digest("hex");
+
+  return {
+    "X-GEMINI-APIKEY": GEM_KEY,
+    "X-GEMINI-PAYLOAD": encoded,
+    "X-GEMINI-SIGNATURE": signature
+  };
+}
+
+// =====================
+// 🔹 GEMINI BALANCES
+// =====================
 async function getGeminiBalances() {
   try {
     const payload = {
@@ -47,20 +73,9 @@ async function getGeminiBalances() {
       nonce: Date.now()
     };
 
-    const encoded = Buffer.from(JSON.stringify(payload)).toString("base64");
-
-    const signature = crypto
-      .createHmac("sha384", GEM_SECRET)
-      .update(encoded)
-      .digest("hex");
-
     const res = await fetch("https://api.gemini.com/v1/balances", {
       method: "POST",
-      headers: {
-        "X-GEMINI-APIKEY": GEM_KEY,
-        "X-GEMINI-PAYLOAD": encoded,
-        "X-GEMINI-SIGNATURE": signature
-      }
+      headers: geminiHeaders(payload)
     });
 
     const data = await res.json();
@@ -73,59 +88,135 @@ async function getGeminiBalances() {
         platform: "gemini"
       }));
 
+  } catch (e) {
+    console.log("Gemini error", e);
+    return [];
+  }
+}
+
+// =====================
+// 🔹 GEMINI TRANSACTIONS (REWARDS)
+// =====================
+async function getGeminiTransactions() {
+  try {
+    const payload = {
+      request: "/v1/transfers",
+      nonce: Date.now()
+    };
+
+    const res = await fetch("https://api.gemini.com/v1/transfers", {
+      method: "POST",
+      headers: geminiHeaders(payload)
+    });
+
+    return await res.json();
+
   } catch {
     return [];
   }
 }
 
-// ===== COINBASE =====
+// =====================
+// 🔐 COINBASE JWT (CDP API)
+// =====================
+function createCoinbaseJWT() {
+  try {
+    const privateKey = CB_PRIVATE_KEY;
+
+    return jwt.sign(
+      {
+        iss: "cdp",
+        nbf: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + 60,
+        sub: CB_KEY
+      },
+      privateKey,
+      {
+        algorithm: "ES256",
+        header: {
+          kid: CB_KEY,
+          nonce: crypto.randomBytes(16).toString("hex")
+        }
+      }
+    );
+  } catch (e) {
+    console.log("JWT ERROR:", e);
+    return null;
+  }
+}
+
+// =====================
+// 🔹 COINBASE BALANCES
+// =====================
 async function getCoinbaseBalances() {
   try {
-    const res = await fetch("https://api.coinbase.com/v2/accounts", {
-      headers: { Authorization: `Bearer ${CB_KEY}` }
+    const token = createCoinbaseJWT();
+    if (!token) return [];
+
+    const res = await fetch("https://api.coinbase.com/api/v3/brokerage/accounts", {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
     });
 
-    const d = await res.json();
+    const data = await res.json();
 
-    return d.data
-      .filter(a => parseFloat(a.balance.amount) > 0)
+    return (data.accounts || [])
+      .filter(a => parseFloat(a.available_balance?.value || 0) > 0)
       .map(a => ({
-        currency: a.balance.currency,
-        amount: parseFloat(a.balance.amount),
+        currency: a.currency,
+        amount: parseFloat(a.available_balance.value),
         platform: "coinbase"
       }));
 
-  } catch {
+  } catch (e) {
+    console.log("Coinbase error", e);
     return [];
   }
 }
 
-// ===== SYNC =====
+// =====================
+// 🔄 SYNC
+// =====================
 app.get("/sync", async (req, res) => {
-  const prices = await getPrices();
+  try {
+    const prices = await getPrices();
 
-  const gemini = await getGeminiBalances();
-  const coinbase = await getCoinbaseBalances();
+    const geminiBalances = await getGeminiBalances();
+    const geminiTx = await getGeminiTransactions();
+    const coinbaseBalances = await getCoinbaseBalances();
 
-  const balances = [...gemini, ...coinbase].map(b => ({
-    ...b,
-    usdValue: b.amount * (prices[b.currency] || 0)
-  }));
+    const balances = [...geminiBalances, ...coinbaseBalances].map(b => ({
+      ...b,
+      usdValue: b.amount * (prices[b.currency] || 0)
+    }));
 
-  res.json({
-    balances,
-    prices,
-    trades: db.data.trades,
-    history: db.data.history,
-    alerts: db.data.alerts,
-    staking: db.data.staking,
-    rewards: db.data.rewards
-  });
+    res.json({
+      prices,
+      balances,
+      transactions: geminiTx,
+      trades: db.data.trades,
+      alerts: db.data.alerts,
+      staking: db.data.staking,
+      rewards: db.data.rewards
+    });
+
+  } catch (e) {
+    res.json({ error: "sync failed" });
+  }
 });
 
-// ===== SAVE ROUTES =====
+// =====================
+// 💾 SAVE ROUTES
+// =====================
 app.post("/trade", async (req, res) => {
   db.data.trades.push(req.body);
+  await db.write();
+  res.json({ ok: true });
+});
+
+app.post("/reward", async (req, res) => {
+  db.data.rewards.push(req.body);
   await db.write();
   res.json({ ok: true });
 });
@@ -142,19 +233,11 @@ app.post("/stake", async (req, res) => {
   res.json({ ok: true });
 });
 
-app.post("/reward", async (req, res) => {
-  db.data.rewards.push(req.body);
-  await db.write();
-  res.json({ ok: true });
-});
-
-// ===== STATIC FILES =====
+// =====================
+// 🚀 START SERVER
+// =====================
 app.use(express.static("."));
 
-// ✅ FIX: FORCE LOAD INDEX.HTML
-app.get("/", (req, res) => {
-  res.sendFile(process.cwd() + "/index.html");
+app.listen(PORT, () => {
+  console.log("💀 FULL SYNC LIVE");
 });
-
-// ===== START SERVER =====
-app.listen(PORT, () => console.log("💀 ULTRA SYSTEM LIVE"));
