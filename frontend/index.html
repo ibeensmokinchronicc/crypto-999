@@ -3,223 +3,89 @@
 <head>
   <title>999 Crypto</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#9333ea">
-
   <link rel="manifest" href="/manifest.json">
-  <link rel="icon" href="/icon-192.png">
-  <link rel="apple-touch-icon" href="/icon-512.png">
-
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
-    body {
-      margin: 0;
-      font-family: Arial;
-      background: black;
-      color: white;
-      text-align: center;
-    }
-
-    h1 {
-      color: #9333ea;
-      text-shadow: 0 0 20px #9333ea;
-    }
-
-    .card {
-      background: #111;
-      margin: 10px auto;
-      padding: 12px;
-      width: 320px;
-      border-radius: 12px;
-      box-shadow: 0 0 10px #9333ea;
-    }
-
-    input, button {
-      padding: 10px;
-      margin: 5px;
-      border-radius: 10px;
-      border: none;
-    }
-
-    button {
-      background: #9333ea;
-      color: white;
-    }
-
-    #offlineBanner {
-      background: red;
-      padding: 5px;
-      display: none;
-    }
-
-    .profit { color: lime; }
-    .loss { color: red; }
+    body { background:black; color:white; text-align:center; }
+    .card { background:#111; margin:10px; padding:10px; border-radius:10px; }
+    button { background:#9333ea; color:white; padding:10px; }
   </style>
 </head>
 
 <body>
 
-<div id="offlineBanner">OFFLINE MODE</div>
-
 <h1>999 Crypto</h1>
 
-<!-- TRADE INPUT -->
-<div class="card">
-  <input id="coin" placeholder="Coin (XRP)">
-  <input id="amount" placeholder="Amount">
-  <input id="price" placeholder="Buy Price">
-  <select id="platform">
-    <option value="manual">Manual</option>
-    <option value="coinbase">Coinbase</option>
-    <option value="gemini">Gemini</option>
-  </select>
-  <button onclick="addTrade()">Add Trade</button>
-</div>
+<input type="file" id="csv">
+<button onclick="importCSV()">Import CSV</button>
 
-<!-- PORTFOLIO -->
+<button onclick="exportTaxes()">Export Tax CSV</button>
+
 <div id="portfolio"></div>
-<h2 id="total"></h2>
-<h3 id="profit"></h3>
-
-<!-- REWARDS -->
-<div class="card">
-  <h3>Rewards (XRP)</h3>
-  <p id="rewards"></p>
-</div>
-
-<!-- ALERT -->
-<div class="card">
-  <input id="alertPrice" placeholder="XRP Alert Price">
-  <button onclick="setAlert()">Set Alert</button>
-</div>
-
-<!-- CHARTS -->
-<canvas id="chart"></canvas>
-<canvas id="historyChart"></canvas>
-
-<!-- INSIGHTS -->
-<h3 id="insights"></h3>
 
 <script>
 
 let trades = JSON.parse(localStorage.getItem("trades")) || [];
-let history = JSON.parse(localStorage.getItem("history")) || [];
-let alerts = JSON.parse(localStorage.getItem("alerts")) || {};
 
-function saveAll() {
-  localStorage.setItem("trades", JSON.stringify(trades));
-  localStorage.setItem("history", JSON.stringify(history));
-  localStorage.setItem("alerts", JSON.stringify(alerts));
+// ===== CSV IMPORT =====
+function importCSV() {
+  const file = document.getElementById("csv").files[0];
+  const reader = new FileReader();
+
+  reader.onload = function(e) {
+    const lines = e.target.result.split("\n");
+
+    lines.forEach(l => {
+      const row = l.split(",");
+      if (row.length > 3) {
+        trades.push({
+          coin: row[1],
+          amount: parseFloat(row[2]),
+          price: parseFloat(row[3])
+        });
+      }
+    });
+
+    localStorage.setItem("trades", JSON.stringify(trades));
+    alert("Imported!");
+  };
+
+  reader.readAsText(file);
 }
 
-function addTrade() {
-  trades.push({
-    coin: coin.value.toUpperCase(),
-    amount: +amount.value,
-    price: +price.value,
-    platform: platform.value
+// ===== TAX EXPORT =====
+function exportTaxes() {
+  let csv = "Coin,Amount,Price\n";
+
+  trades.forEach(t => {
+    csv += `${t.coin},${t.amount},${t.price}\n`;
   });
-  saveAll();
-  load();
+
+  const blob = new Blob([csv]);
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "taxes.csv";
+  a.click();
 }
 
-function setAlert() {
-  alerts.XRP = +alertPrice.value;
-  saveAll();
-}
-
+// ===== LOAD =====
 async function load() {
-  let data;
-
-  try {
-    const res = await fetch("/sync");
-    data = await res.json();
-  } catch {
-    const cache = await caches.open("crypto-final");
-    const cached = await cache.match("/sync");
-    if (cached) data = await cached.json();
-    else return;
-  }
-
-  let total = 0, profit = 0;
-  let labels = [], values = [];
+  const res = await fetch("/sync");
+  const data = await res.json();
 
   portfolio.innerHTML = "";
 
-  trades.forEach(t => {
-    const p = data.prices[t.coin] || 0;
-    const val = t.amount * p;
-    const cost = t.amount * t.price;
-
-    total += val;
-    profit += val - cost;
-
-    labels.push(t.coin);
-    values.push(val);
-
+  data.balances.forEach(c => {
     portfolio.innerHTML += `
       <div class="card">
-        <h3>${t.coin} (${t.platform})</h3>
-        <p>$${val.toFixed(2)}</p>
-        <p class="${val-cost>=0?'profit':'loss'}">
-          ${(val-cost).toFixed(2)}
-        </p>
+        ${c.currency}: $${c.usdValue.toFixed(2)}
       </div>
     `;
   });
-
-  total.innerText = "Total: $" + total.toFixed(2);
-  profitEl.innerText = "Profit: $" + profit.toFixed(2);
-
-  // HISTORY
-  history.push({ time: Date.now(), value: total });
-  if (history.length > 50) history.shift();
-
-  // ALERT
-  if (alerts.XRP && data.prices.XRP >= alerts.XRP) {
-    alert("XRP hit your target!");
-  }
-
-  // REWARDS (simple auto detect)
-  const xrp = trades.filter(t => t.coin === "XRP");
-  rewards.innerText = xrp.length + " XRP reward entries";
-
-  saveAll();
-
-  new Chart(chart, {
-    type: "doughnut",
-    data: { labels, datasets: [{ data: values }] }
-  });
-
-  new Chart(historyChart, {
-    type: "line",
-    data: {
-      labels: history.map(h => new Date(h.time).toLocaleTimeString()),
-      datasets: [{ data: history.map(h => h.value) }]
-    }
-  });
-
-  insights.innerText =
-    history.length > 1 && history.at(-1).value > history.at(-2).value
-    ? "📈 Uptrend"
-    : "📉 Downtrend";
 }
 
-// OFFLINE
-function status() {
-  offlineBanner.style.display = navigator.onLine ? "none" : "block";
-}
-
-window.addEventListener("online", load);
-window.addEventListener("offline", status);
-
-status();
 load();
-
-// SW
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("/service-worker.js");
-}
 
 </script>
 
