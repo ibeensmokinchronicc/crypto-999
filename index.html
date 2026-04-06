@@ -16,15 +16,34 @@ body {
   font-family:-apple-system;
   background:radial-gradient(circle,#0a0a0a,#000);
   color:white;
-  overflow-x:hidden;
+  padding-bottom:90px;
+}
+
+/* SPLASH */
+#splash{
+position:fixed;
+width:100%;
+height:100%;
+background:#000;
+display:flex;
+align-items:center;
+justify-content:center;
+z-index:9999;
+animation:fadeOut 1s ease forwards;
+animation-delay:2.5s;
+}
+
+#logo{
+font-size:60px;
+color:#c084fc;
+text-shadow:0 0 30px #9333ea;
+animation:pulse 1.5s infinite;
 }
 
 /* HEADER */
 h1 {
   text-align:center;
   color:#c084fc;
-  text-shadow:0 0 20px #9333ea;
-  animation:fadeIn 1s ease;
 }
 
 /* CARD */
@@ -34,82 +53,45 @@ h1 {
   padding:16px;
   border-radius:16px;
   border:1px solid rgba(147,51,234,0.3);
-  backdrop-filter:blur(10px);
-  box-shadow:0 0 15px rgba(147,51,234,0.2);
-  transition:all .25s ease;
-  animation:slideUp .4s ease;
 }
 
-.card:hover {
-  transform:translateY(-5px) scale(1.02);
-  box-shadow:0 0 25px #9333ea;
-}
-
-/* INPUT */
-input {
-  width:100%;
-  padding:10px;
-  margin:6px 0;
-  border-radius:10px;
-  border:none;
-  background:#111;
-  color:white;
-}
-
-/* BUTTON */
-button {
-  width:100%;
-  padding:12px;
-  border-radius:12px;
-  border:none;
-  background:linear-gradient(135deg,#9333ea,#6b21a8);
-  color:white;
-}
-  
 /* NAV */
 .tabs {
   position:fixed;
   bottom:0;
   width:100%;
   display:flex;
-  background:rgba(0,0,0,0.9);
-  border-top:1px solid #9333ea;
+  background:#000;
 }
 
 .tabs button { flex:1; }
 
-.hidden { display:none; }
-.profit { color:#22c55e; }
-.loss { color:#ef4444; }
+.hidden{display:none;}
 
-/* ANIMATIONS */
-@keyframes fadeIn {
-  from {opacity:0;}
-  to {opacity:1;}
+@keyframes pulse{
+0%{transform:scale(1);}
+50%{transform:scale(1.1);}
+100%{transform:scale(1);}
 }
 
-@keyframes slideUp {
-  from {transform:translateY(20px);opacity:0;}
-  to {transform:translateY(0);opacity:1;}
+@keyframes fadeOut{
+to{opacity:0;visibility:hidden;}
 }
 
-/* PARTICLES */
-#bg {
-  position:fixed;
-  top:0;
-  left:0;
-  z-index:-1;
-}
+#bg{position:fixed;z-index:-1;}
 </style>
 </head>
 
 <body>
 
+<!-- SPLASH -->
+<div id="splash"><div id="logo">999</div></div>
+
 <canvas id="bg"></canvas>
 
 <h1>999 Crypto 💀</h1>
 
-<!-- YOUR EXISTING UI (UNCHANGED) -->
+<!-- PORTFOLIO -->
 <div id="portfolioTab">
 <div class="card">
 <input id="coin" placeholder="Coin">
@@ -117,16 +99,17 @@ button {
 <input id="price" placeholder="Buy Price">
 <button onclick="addTrade()">Add Trade</button>
 </div>
-
 <div id="portfolio"></div>
 <h2 id="total"></h2>
 <h3 id="profit"></h3>
 </div>
 
+<!-- ANALYTICS -->
 <div id="analyticsTab" class="hidden">
 <canvas id="chart"></canvas>
 </div>
 
+<!-- REWARDS -->
 <div id="rewardsTab" class="hidden">
 <div class="card">
 <h3>💎 Rewards</h3>
@@ -138,46 +121,66 @@ button {
 </div>
 </div>
 
+<!-- ELITE -->
 <div id="eliteTab" class="hidden">
 <div class="card">
+
 <div id="platformData"></div>
 <div id="riskData"></div>
 <div id="tradeHistory"></div>
 <div id="taxData"></div>
 <div id="insightData"></div>
+
+<!-- XRP UI -->
+<div id="xrpStats"></div>
+
+<div style="margin-top:10px;">
+<div style="font-size:12px;">XRP Dominance</div>
+<div style="background:#222;height:10px;">
+<div id="xrpBar" style="height:10px;width:0%;background:#9333ea"></div>
 </div>
 </div>
 
+<canvas id="rewardChart"></canvas>
+
+</div>
+</div>
+
+<!-- ALERTS -->
 <div id="alertsTab" class="hidden">
 <div class="card">
-<input id="alertCoin" placeholder="Coin">
-<input id="alertPrice" placeholder="Price">
+<input id="alertCoin">
+<input id="alertPrice">
 <button onclick="addAlert()">Set Alert</button>
 </div>
 </div>
 
+<!-- STAKING -->
 <div id="stakingTab" class="hidden">
 <div class="card">
-<input id="stakeCoin" placeholder="Coin">
-<input id="stakeAmount" placeholder="Amount">
+<input id="stakeCoin">
+<input id="stakeAmount">
 <button onclick="addStake()">Add Stake</button>
 </div>
-  
-<div id="aiTab" class="hidden">
-  <div class="card">
-    <h3>🤖 AI Insights</h3>
-    <div id="aiBox"></div>
-  </div>
-  
-<div id="liveTab" class="hidden">
-  <div class="card">
-    <h3>📡 Live Market</h3>
-    <canvas id="liveChart"></canvas>
-  </div>
-
-  <div id="livePrices"></div>
 </div>
 
+<!-- AI -->
+<div id="aiTab" class="hidden">
+<div class="card">
+<h3>AI</h3>
+<div id="aiBox"></div>
+</div>
+</div>
+
+<!-- LIVE -->
+<div id="liveTab" class="hidden">
+<div class="card">
+<canvas id="liveChart"></canvas>
+</div>
+<div id="livePrices"></div>
+</div>
+
+<!-- NAV -->
 <div class="tabs">
 <button onclick="tab('portfolioTab')">💰</button>
 <button onclick="tab('analyticsTab')">📊</button>
@@ -191,300 +194,139 @@ button {
 
 <script>
 
-// (YOUR FULL EXISTING SCRIPT STAYS EXACTLY THE SAME ABOVE THIS POINT)
+// REMOVE SPLASH
+setTimeout(()=>{
+const s=document.getElementById("splash");
+if(s) s.style.display="none";
+},3000);
 
-// PARTICLES (ADDED — SAFE)
+// XRP MODE
+let LIVE_PRICES={};
+let rewardHistory=[];
+let seenRewards=[];
+
+// LIVE XRP FIRST
+setInterval(async ()=>{
+const res=await fetch("https://api.coinbase.com/v2/exchange-rates?currency=USD");
+const data=await res.json();
+
+["XRP","BTC","ETH"].forEach(c=>{
+LIVE_PRICES[c]=1/data.data.rates[c];
+});
+
+renderLivePrices();
+
+},2500);
+
+function renderLivePrices(){
+let html="";
+for(let c in LIVE_PRICES){
+html+=`<div class="card"><h3>${c}</h3><p>$${LIVE_PRICES[c].toFixed(4)}</p></div>`;
+}
+livePrices.innerHTML=html;
+}
+
+// XRP CHART
+let chartData={labels:[],datasets:[{label:"XRP",data:[]}]};
+
+let chart;
+
+function initLiveChart(){
+chart=new Chart(liveChart,{type:"line",data:chartData});
+}
+
+setInterval(()=>{
+if(LIVE_PRICES["XRP"]){
+chartData.labels.push("");
+chartData.datasets[0].data.push(LIVE_PRICES["XRP"]);
+
+if(chartData.labels.length>25){
+chartData.labels.shift();
+chartData.datasets[0].data.shift();
+}
+
+chart.update();
+}
+},2500);
+
+initLiveChart();
+
+// XRP ENGINE
+async function runXRPEngine(){
+
+const res=await fetch("/sync");
+const data=await res.json();
+
+let total=0,xrp=0;
+
+data.balances?.forEach(b=>{
+total+=b.usdValue;
+if(b.currency==="XRP") xrp+=b.usdValue;
+});
+
+let dom = total ? (xrp/total)*100 : 0;
+
+xrpStats.innerHTML=`
+<p>$${xrp.toFixed(2)}</p>
+<p>${dom.toFixed(2)}%</p>
+`;
+
+xrpBar.style.width=dom+"%";
+
+// rewards
+let newR=0;
+data.transactions?.forEach(tx=>{
+if(tx.currency==="XRP"&&tx.type==="Credit"){
+newR+=parseFloat(tx.amount||0);
+}
+});
+
+rewardHistory.push(newR);
+if(rewardHistory.length>20) rewardHistory.shift();
+
+renderRewardChart();
+
+}
+
+function renderRewardChart(){
+new Chart(rewardChart,{
+type:"line",
+data:{labels:rewardHistory.map((_,i)=>i),
+datasets:[{data:rewardHistory}]}
+});
+}
+
+setInterval(runXRPEngine,6000);
+
+// PARTICLES
 const bg=document.getElementById("bg");
 const ctx=bg.getContext("2d");
 
-bg.width=window.innerWidth;
-bg.height=window.innerHeight;
+bg.width=innerWidth;
+bg.height=innerHeight;
 
-let particles=Array.from({length:40},()=>({
+let particles=Array.from({length:30},()=>({
 x:Math.random()*bg.width,
 y:Math.random()*bg.height,
 r:Math.random()*2,
-d:Math.random()*0.5
+d:Math.random()*0.4
 }));
 
-function drawParticles(){
+function draw(){
 ctx.clearRect(0,0,bg.width,bg.height);
 ctx.fillStyle="rgba(147,51,234,0.3)";
-
 particles.forEach(p=>{
 ctx.beginPath();
 ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
 ctx.fill();
 p.y+=p.d;
-
-if(p.y>bg.height){
-p.y=0;
-p.x=Math.random()*bg.width;
-}
+if(p.y>bg.height)p.y=0;
 });
-
-requestAnimationFrame(drawParticles);
+requestAnimationFrame(draw);
 }
+draw();
 
-drawParticles();
-// =====================
-// 🔔 NOTIFICATIONS SYSTEM (SAFE ADD)
-// =====================
-async function enableNotifications(){
-if(!("Notification" in window)) return;
-
-const permission = await Notification.requestPermission();
-
-if(permission === "granted"){
-new Notification("999 Crypto 💀", {
-body:"Notifications Enabled",
-icon:"/icon-192.png"
-});
-}
-}
-
-function sendNotification(title, body){
-if(Notification.permission === "granted"){
-new Notification(title, {
-body,
-icon:"/icon-192.png"
-});
-}
-}
-// =====================
-// 🔔 SMART ALERT + REWARD SYSTEM (NO SPAM)
-// =====================
-
-// store seen rewards
-let seenRewards = JSON.parse(localStorage.getItem("seenRewards") || "[]");
-
-setInterval(async () => {
-try{
-const res = await fetch("/sync");
-const data = await res.json();
-
-// PRICE ALERTS
-data.alerts?.forEach(a=>{
-const price = data.prices[a.coin] || 0;
-
-if(price >= a.price){
-sendNotification("🚨 Price Alert", `${a.coin} hit $${a.price}`);
-}
-});
-
-// XRP REWARDS (SMART)
-data.transactions?.forEach(tx=>{
-if(tx.currency==="XRP" && tx.type==="Credit"){
-
-const id = tx.timestamp || tx.txid || tx.amount + tx.date;
-
-// if not seen before
-if(!seenRewards.includes(id)){
-seenRewards.push(id);
-
-// save memory
-localStorage.setItem("seenRewards", JSON.stringify(seenRewards));
-
-// notify once
-sendNotification("💎 XRP Reward", `+${tx.amount} XRP received`);
-}
-
-}
-});
-
-}catch(e){
-console.log("alert system error");
-}
-}, 7000);
-
-  if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("/service-worker.js");
-}
-
-  // =====================
-// 🧠 AI PORTFOLIO OPTIMIZER
-// =====================
-function runAI(data){
-
-if(!document.getElementById("aiBox")) return;
-
-let suggestions=[];
-
-// CALCULATE POSITIONS
-let positions={};
-
-data.trades.forEach(t=>{
-const val = t.amount * (data.prices[t.coin] || 0);
-positions[t.coin] = (positions[t.coin] || 0) + val;
-});
-
-// TOTAL VALUE
-const total = Object.values(positions).reduce((a,b)=>a+b,0);
-
-// ANALYZE
-let best=null, worst=null;
-
-for(let coin in positions){
-
-const val = positions[coin];
-const percent = (val/total)*100;
-
-// OVEREXPOSED
-if(percent > 50){
-suggestions.push(`⚠️ ${coin} is ${percent.toFixed(1)}% of portfolio`);
-}
-
-// LOW POSITION
-if(percent < 5){
-suggestions.push(`📉 ${coin} is under 5% (low exposure)`);
-}
-
-// TRACK BEST/WORST
-const trade = data.trades.find(t=>t.coin===coin);
-if(trade){
-const pnl = (trade.amount*(data.prices[coin]||0))-(trade.amount*trade.price);
-
-if(!best || pnl > best.pnl) best={coin,pnl};
-if(!worst || pnl < worst.pnl) worst={coin,pnl};
-}
-
-}
-
-// FINAL INSIGHTS
-if(best) suggestions.push(`🔥 Best: ${best.coin} (+$${best.pnl.toFixed(2)})`);
-if(worst) suggestions.push(`💀 Worst: ${worst.coin} ($${worst.pnl.toFixed(2)})`);
-
-// RISK WARNING
-if(total > 0){
-const largest = Math.max(...Object.values(positions));
-if((largest/total)*100 > 60){
-suggestions.push("🚨 High concentration risk");
-}
-}
-
-// RENDER
-document.getElementById("aiBox").innerHTML = suggestions.map(s=>`<p>${s}</p>`).join("");
-
-}
-
-  // =====================
-// 🧠 AUTO RUN AI (NO load() NEEDED)
-// =====================
-setInterval(() => {
-if (GLOBAL_DATA && GLOBAL_DATA.trades) {
-runAI(GLOBAL_DATA);
-}
-}, 5000);
-
-  // =====================
-// 📡 LIVE MARKET STREAM
-// =====================
-let LIVE_PRICES = {};
-
-async function startLivePrices(){
-
-setInterval(async ()=>{
-
-try{
-const res = await fetch("https://api.coinbase.com/v2/exchange-rates?currency=USD");
-const data = await res.json();
-const rates = data.data.rates;
-
-// convert to USD price
-const coins = ["BTC","ETH","XRP","SOL","DOGE"];
-
-coins.forEach(c=>{
-if(rates[c]){
-LIVE_PRICES[c] = 1 / rates[c];
-}
-});
-
-renderLivePrices();
-const selected = "XRP"; // change dynamically later
-if(LIVE_PRICES[selected]) updateChart(LIVE_PRICES[selected]);
-  
-}catch(e){
-console.log("live price error");
-}
-
-}, 2500);
-}
-
-// =====================
-// 🎨 RENDER LIVE PRICES
-// =====================
-function renderLivePrices(){
-
-if(!document.getElementById("livePrices")) return;
-
-let html="";
-
-Object.keys(LIVE_PRICES).forEach(c=>{
-html+=`
-<div class="card">
-<h3>${c}</h3>
-<p>$${LIVE_PRICES[c].toFixed(2)}</p>
-</div>
-`;
-});
-
-document.getElementById("livePrices").innerHTML = html;
-}
-
-// START STREAM
-startLivePrices();
-  
-</// =====================
-// 📊 LIVE CHART SYSTEM
-// =====================
-let liveChart;
-let chartData = {
-labels: [],
-datasets: [{
-label: "BTC",
-data: [],
-borderWidth: 2,
-tension: 0.4
-}]
-};
-
-// INIT CHART
-function initLiveChart(){
-const ctx = document.getElementById("liveChart");
-
-if(!ctx) return;
-
-liveChart = new Chart(ctx, {
-type: "line",
-data: chartData,
-options: {
-responsive: true,
-plugins: { legend: { display: false } },
-scales: {
-x: { display: false },
-y: { display: true }
-}
-}
-});
-}
-
-// UPDATE CHART
-function updateChart(price){
-
-const now = new Date().toLocaleTimeString();
-
-chartData.labels.push(now);
-chartData.datasets[0].data.push(price);
-
-// limit length
-if(chartData.labels.length > 20){
-chartData.labels.shift();
-chartData.datasets[0].data.shift();
-}
-
-liveChart.update();
-  initLiveChart();
-}script>
+</script>
 
 </body>
 </html>
