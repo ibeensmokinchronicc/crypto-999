@@ -4,127 +4,68 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>999 Crypto</title>
 
-  <link rel="manifest" href="/manifest.json">
+<link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-body {
-  margin:0;
-  font-family:-apple-system;
-  background:radial-gradient(circle,#0a0a0a,#000);
-  color:white;
-  overflow-x:hidden;
+body {margin:0;font-family:-apple-system;background:radial-gradient(circle,#0a0a0a,#000);color:white;}
+h1{text-align:center;color:#c084fc;text-shadow:0 0 20px #9333ea;}
+
+.card{
+background:rgba(20,20,20,0.85);
+margin:10px;
+padding:14px;
+border-radius:14px;
+border:1px solid rgba(147,51,234,0.4);
+box-shadow:0 0 20px rgba(147,51,234,0.2);
 }
 
-/* HEADER */
-h1 {
-  text-align:center;
-  color:#c084fc;
-  text-shadow:0 0 15px #9333ea;
-  animation:fadeIn 1s ease;
+input,select{
+width:100%;
+padding:10px;
+margin:6px 0;
+border-radius:8px;
+border:none;
+background:#111;
+color:white;
 }
 
-/* CARD */
-.card {
-  background:rgba(20,20,20,0.7);
-  margin:10px;
-  padding:14px;
-  border-radius:14px;
-  border:1px solid rgba(147,51,234,0.3);
-  backdrop-filter:blur(10px);
-  box-shadow:0 0 10px rgba(147,51,234,0.2);
-  animation:slideUp .4s ease;
-  transition:.2s;
+button{
+width:100%;
+padding:10px;
+border-radius:10px;
+border:none;
+background:linear-gradient(135deg,#9333ea,#6b21a8);
+color:white;
 }
 
-.card:hover {
-  transform:translateY(-3px);
-  box-shadow:0 0 20px #9333ea;
+.tabs{
+position:fixed;
+bottom:0;
+width:100%;
+display:flex;
+background:#000;
 }
 
-/* INPUTS */
-input {
-  width:100%;
-  padding:10px;
-  margin:6px 0;
-  border-radius:8px;
-  border:none;
-  background:#111;
-  color:white;
-}
+.tabs button{font-size:18px;}
 
-/* BUTTON */
-button {
-  width:100%;
-  padding:10px;
-  border-radius:10px;
-  border:none;
-  background:linear-gradient(135deg,#9333ea,#6b21a8);
-  color:white;
-  transition:.2s;
-}
-
-button:active {
-  transform:scale(.95);
-}
-
-/* TABS */
-.tabs {
-  position:fixed;
-  bottom:0;
-  width:100%;
-  display:flex;
-  justify-content:space-around;
-  background:#000;
-  border-top:1px solid #9333ea;
-}
-
-.tabs button {
-  width:100%;
-  background:none;
-  font-size:18px;
-}
-
-/* STATES */
-.hidden { display:none; }
-.profit { color:#22c55e; }
-.loss { color:#ef4444; }
-
-/* ANIMATIONS */
-@keyframes fadeIn {
-  from {opacity:0;}
-  to {opacity:1;}
-}
-
-@keyframes slideUp {
-  from {transform:translateY(20px);opacity:0;}
-  to {transform:translateY(0);opacity:1;}
-}
-
-/* PARTICLES */
-#bg {
-  position:fixed;
-  top:0;
-  left:0;
-  z-index:-1;
-}
+.hidden{display:none;}
+.profit{color:#22c55e;}
+.loss{color:#ef4444;}
 </style>
 </head>
 
 <body>
 
-<canvas id="bg"></canvas>
-
-<h1>999 Crypto</h1>
+<h1>999 Crypto 💜</h1>
 
 <!-- PORTFOLIO -->
 <div id="portfolioTab">
 <div class="card">
-<input id="coin" placeholder="Coin (BTC)">
+<input id="coin" placeholder="Coin">
 <input id="amount" placeholder="Amount">
 <input id="price" placeholder="Buy Price">
 <button onclick="addTrade()">Add Trade</button>
@@ -138,6 +79,25 @@ button:active {
 <!-- ANALYTICS -->
 <div id="analyticsTab" class="hidden">
 <canvas id="chart"></canvas>
+<canvas id="equityChart"></canvas>
+</div>
+
+<!-- REWARDS -->
+<div id="rewardsTab" class="hidden">
+<div class="card">
+<h3>💳 Rewards Engine</h3>
+<input id="spendAmount" placeholder="Spent $">
+<select id="spendType">
+<option value="gas">Gas (4%)</option>
+<option value="dining">Dining (3%)</option>
+<option value="groceries">Groceries (2%)</option>
+<option value="other">Other (1%)</option>
+</select>
+<button onclick="addReward()">Add Reward</button>
+</div>
+
+<div id="rewardStats"></div>
+<canvas id="rewardChart"></canvas>
 </div>
 
 <!-- ALERTS -->
@@ -158,37 +118,46 @@ button:active {
 </div>
 </div>
 
+<!-- SETTINGS -->
+<div id="settingsTab" class="hidden">
+<div class="card">
+<h3>⚙️ Settings</h3>
+<label><input type="checkbox" id="aiToggle"> AI Insights</label>
+<label><input type="checkbox" id="notifyToggle"> Notifications</label>
+</div>
+</div>
+
 <!-- NAV -->
 <div class="tabs">
 <button onclick="tab('portfolioTab')">💰</button>
 <button onclick="tab('analyticsTab')">📊</button>
+<button onclick="tab('rewardsTab')">🎁</button>
 <button onclick="tab('alertsTab')">🔔</button>
 <button onclick="tab('stakingTab')">🏦</button>
+<button onclick="tab('settingsTab')">⚙️</button>
 </div>
 
 <script>
 
 let chartInstance;
+let equityChart;
+let rewardChart;
+let knownTx = new Set();
 
-// TAB SWITCH
 function tab(id){
-["portfolioTab","analyticsTab","alertsTab","stakingTab"]
+["portfolioTab","analyticsTab","rewardsTab","alertsTab","stakingTab","settingsTab"]
 .forEach(t=>document.getElementById(t).classList.add("hidden"));
-
-const el = document.getElementById(id);
-el.classList.remove("hidden");
-el.style.animation="fadeIn .3s";
+document.getElementById(id).classList.remove("hidden");
 }
 
-// LOAD
 async function load(){
 const res = await fetch("/sync");
 const data = await res.json();
 
-let total=0;
-let profit=0;
-
+let total=0, profit=0;
 portfolio.innerHTML="";
+
+let equityData=[];
 
 data.trades.forEach(t=>{
 const p=data.prices[t.coin]||0;
@@ -198,35 +167,108 @@ const cost=t.amount*t.price;
 total+=value;
 profit+=value-cost;
 
+equityData.push(value);
+
 portfolio.innerHTML+=`
 <div class="card">
 <h3>${t.coin}</h3>
 <p>$${value.toFixed(2)}</p>
-<p class="${value-cost>=0?'profit':'loss'}">
-${(value-cost).toFixed(2)}
-</p>
+<p class="${value-cost>=0?'profit':'loss'}">${(value-cost).toFixed(2)}</p>
 </div>`;
 });
 
-document.getElementById("total").innerText="Total: $"+total.toFixed(2);
-document.getElementById("profit").innerText="Profit: $"+profit.toFixed(2);
+total.innerText="Total: $"+total.toFixed(2);
+profit.innerText="Profit: $"+profit.toFixed(2);
 
-// CHART
+// portfolio chart
 const labels=data.trades.map(t=>t.coin);
 const values=data.trades.map(t=>t.amount*(data.prices[t.coin]||0));
 
 if(chartInstance) chartInstance.destroy();
+chartInstance=new Chart(chart,{type:"doughnut",data:{labels,datasets:[{data:values}]}});
 
-chartInstance=new Chart(chart,{
-type:"doughnut",
+// equity curve
+if(equityChart) equityChart.destroy();
+equityChart=new Chart(equityChartCanvas(),{
+type:"line",
+data:{labels,equityData}
+});
+
+// rewards
+detectRewards(data.transactions||[],data.prices);
+renderRewards(data.rewards||[],data.prices);
+
+}
+
+// helper for equity canvas
+function equityChartCanvas(){
+return document.getElementById("equityChart");
+}
+
+// reward detection
+async function detectRewards(tx,prices){
+const xrp=prices["XRP"]||1;
+
+for(const t of tx){
+if(t.type==="credit" && t.currency==="XRP"){
+if(!knownTx.has(t.id)){
+knownTx.add(t.id);
+
+await fetch("/reward",{method:"POST",
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({
+amount:t.amount,
+type:"gemini-auto",
+rewardUSD:t.amount*xrp,
+date:Date.now()
+})
+});
+}
+}
+}
+}
+
+// reward rendering
+function renderRewards(rewards,prices){
+let total=0;
+let monthly=0;
+let gasSpend=0;
+
+const now=new Date();
+const monthStart=new Date(now.getFullYear(),now.getMonth(),1);
+
+rewards.forEach(r=>{
+total+=r.rewardUSD;
+if(new Date(r.date)>monthStart){
+monthly+=r.rewardUSD;
+if(r.type==="gas") gasSpend+=r.amount;
+}
+});
+
+const xrp=prices["XRP"]||1;
+
+rewardStats.innerHTML=`
+<div class="card">
+<h3>Total: $${total.toFixed(2)}</h3>
+<h3>Monthly: $${monthly.toFixed(2)}</h3>
+<h3>XRP: ${(total/xrp).toFixed(2)}</h3>
+<p>Gas: $${gasSpend.toFixed(2)} / 300</p>
+</div>`;
+
+// reward chart
+const labels=rewards.map(r=>new Date(r.date).toLocaleDateString());
+const values=rewards.map(r=>r.rewardUSD);
+
+if(rewardChart) rewardChart.destroy();
+rewardChart=new Chart(document.getElementById("rewardChart"),{
+type:"line",
 data:{labels,datasets:[{data:values}]}
 });
 }
 
-// ADD TRADE
+// actions
 async function addTrade(){
-await fetch("/trade",{
-method:"POST",
+await fetch("/trade",{method:"POST",
 headers:{'Content-Type':'application/json'},
 body:JSON.stringify({
 coin:coin.value.toUpperCase(),
@@ -234,68 +276,43 @@ amount:+amount.value,
 price:+price.value
 })
 });
-
-coin.value=""; amount.value=""; price.value="";
 load();
 }
 
-// ALERT
+async function addReward(){
+let percent=0.01;
+if(spendType.value==="gas") percent=0.04;
+if(spendType.value==="dining") percent=0.03;
+if(spendType.value==="groceries") percent=0.02;
+
+const rewardUSD=+spendAmount.value*percent;
+
+await fetch("/reward",{method:"POST",
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({
+amount:+spendAmount.value,
+type:spendType.value,
+rewardUSD,
+date:Date.now()
+})
+});
+load();
+}
+
 function addAlert(){
-fetch("/alert",{
-method:"POST",
+fetch("/alert",{method:"POST",
 headers:{'Content-Type':'application/json'},
-body:JSON.stringify({
-coin:alertCoin.value,
-price:+alertPrice.value
-})
-});
+body:JSON.stringify({coin:alertCoin.value,price:+alertPrice.value})});
 }
 
-// STAKE
 function addStake(){
-fetch("/stake",{
-method:"POST",
+fetch("/stake",{method:"POST",
 headers:{'Content-Type':'application/json'},
-body:JSON.stringify({
-coin:stakeCoin.value,
-amount:+stakeAmount.value
-})
-});
+body:JSON.stringify({coin:stakeCoin.value,amount:+stakeAmount.value})});
 }
 
-// AUTO REFRESH
 setInterval(load,5000);
 load();
-
-// PARTICLES
-const bg=document.getElementById("bg");
-const ctx=bg.getContext("2d");
-
-bg.width=window.innerWidth;
-bg.height=window.innerHeight;
-
-let particles=Array.from({length:30},()=>({
-x:Math.random()*bg.width,
-y:Math.random()*bg.height,
-r:Math.random()*2,
-d:Math.random()*0.4
-}));
-
-function draw(){
-ctx.clearRect(0,0,bg.width,bg.height);
-ctx.fillStyle="rgba(147,51,234,0.3)";
-
-particles.forEach(p=>{
-ctx.beginPath();
-ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
-ctx.fill();
-p.y+=p.d;
-if(p.y>bg.height)p.y=0;
-});
-
-requestAnimationFrame(draw);
-}
-draw();
 
 </script>
 </body>
