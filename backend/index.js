@@ -62,7 +62,7 @@ async function getGeminiBalances() {
 // ---------------- COINBASE (FINAL FIX) ----------------
 async function getCoinbaseAccounts() {
   try {
-    const uri = "GET api.coinbase.com/api/v3/brokerage/accounts";
+    const uri = "const uri = "GET /api/v3/brokerage/accounts";
 
     // 🔥 THIS FIXES YOUR EC KEY ISSUE
     const PRIVATE_KEY_OBJ = crypto.createPrivateKey({
