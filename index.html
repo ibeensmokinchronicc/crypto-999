@@ -8,156 +8,52 @@
 <link rel="apple-touch-icon" href="/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<style>
-body {margin:0;font-family:-apple-system;background:radial-gradient(circle,#0a0a0a,#000);color:white;}
-h1{text-align:center;color:#c084fc;text-shadow:0 0 20px #9333ea;}
-
-.card{
-background:rgba(20,20,20,0.85);
-margin:10px;
-padding:14px;
-border-radius:14px;
-border:1px solid rgba(147,51,234,0.4);
-box-shadow:0 0 20px rgba(147,51,234,0.2);
-}
-
-input,select{
-width:100%;
-padding:10px;
-margin:6px 0;
-border-radius:8px;
-border:none;
-background:#111;
-color:white;
-}
-
-button{
-width:100%;
-padding:10px;
-border-radius:10px;
-border:none;
-background:linear-gradient(135deg,#9333ea,#6b21a8);
-color:white;
-}
-
-.tabs{
-position:fixed;
-bottom:0;
-width:100%;
-display:flex;
-background:#000;
-}
-
-.tabs button{font-size:18px;}
-
-.hidden{display:none;}
-.profit{color:#22c55e;}
-.loss{color:#ef4444;}
-</style>
-</head>
-
-<body>
-
-<h1>999 Crypto 💜</h1>
-
-<!-- PORTFOLIO -->
-<div id="portfolioTab">
-<div class="card">
-<input id="coin" placeholder="Coin">
-<input id="amount" placeholder="Amount">
-<input id="price" placeholder="Buy Price">
-<button onclick="addTrade()">Add Trade</button>
-</div>
-
-<div id="portfolio"></div>
-<h2 id="total"></h2>
-<h3 id="profit"></h3>
-</div>
-
-<!-- ANALYTICS -->
-<div id="analyticsTab" class="hidden">
-<canvas id="chart"></canvas>
-<canvas id="equityChart"></canvas>
-</div>
-
-<!-- REWARDS -->
-<div id="rewardsTab" class="hidden">
-<div class="card">
-<h3>💳 Rewards Engine</h3>
-<input id="spendAmount" placeholder="Spent $">
-<select id="spendType">
-<option value="gas">Gas (4%)</option>
-<option value="dining">Dining (3%)</option>
-<option value="groceries">Groceries (2%)</option>
-<option value="other">Other (1%)</option>
-</select>
-<button onclick="addReward()">Add Reward</button>
-</div>
-
-<div id="rewardStats"></div>
-<canvas id="rewardChart"></canvas>
-</div>
-
-<!-- ALERTS -->
-<div id="alertsTab" class="hidden">
-<div class="card">
-<input id="alertCoin" placeholder="Coin">
-<input id="alertPrice" placeholder="Target Price">
-<button onclick="addAlert()">Set Alert</button>
-</div>
-</div>
-
-<!-- STAKING -->
-<div id="stakingTab" class="hidden">
-<div class="card">
-<input id="stakeCoin" placeholder="Coin">
-<input id="stakeAmount" placeholder="Amount">
-<button onclick="addStake()">Add Stake</button>
-</div>
-</div>
-
-<!-- SETTINGS -->
-<div id="settingsTab" class="hidden">
-<div class="card">
-<h3>⚙️ Settings</h3>
-<label><input type="checkbox" id="aiToggle"> AI Insights</label>
-<label><input type="checkbox" id="notifyToggle"> Notifications</label>
-</div>
-</div>
-
-<!-- NAV -->
-<div class="tabs">
-<button onclick="tab('portfolioTab')">💰</button>
-<button onclick="tab('analyticsTab')">📊</button>
-<button onclick="tab('rewardsTab')">🎁</button>
-<button onclick="tab('alertsTab')">🔔</button>
-<button onclick="tab('stakingTab')">🏦</button>
-<button onclick="tab('settingsTab')">⚙️</button>
-</div>
-
 <script>
 
+// GLOBAL STATE
 let chartInstance;
-let equityChart;
-let rewardChart;
-let knownTx = new Set();
+let GLOBAL_DATA = {};
 
+// TAB
 function tab(id){
-["portfolioTab","analyticsTab","rewardsTab","alertsTab","stakingTab","settingsTab"]
-.forEach(t=>document.getElementById(t).classList.add("hidden"));
-document.getElementById(id).classList.remove("hidden");
+["portfolioTab","analyticsTab","alertsTab","stakingTab","eliteTab","rewardsTab","settingsTab"]
+.forEach(t=>{
+const el=document.getElementById(t);
+if(el) el.classList.add("hidden");
+});
+
+const el=document.getElementById(id);
+if(el){
+el.classList.remove("hidden");
+el.style.animation="fadeIn .3s";
+}
 }
 
+// LOAD DATA
 async function load(){
+try{
 const res = await fetch("/sync");
 const data = await res.json();
+GLOBAL_DATA = data;
 
-let total=0, profit=0;
+renderPortfolio(data);
+renderRewards(data);
+renderElite(data);
+
+}catch(e){
+console.log("sync failed", e);
+}
+}
+
+// =====================
+// 💰 PORTFOLIO
+// =====================
+function renderPortfolio(data){
+
+let total=0;
+let profit=0;
+
 portfolio.innerHTML="";
-
-let equityData=[];
 
 data.trades.forEach(t=>{
 const p=data.prices[t.coin]||0;
@@ -167,108 +63,176 @@ const cost=t.amount*t.price;
 total+=value;
 profit+=value-cost;
 
-equityData.push(value);
-
 portfolio.innerHTML+=`
 <div class="card">
 <h3>${t.coin}</h3>
 <p>$${value.toFixed(2)}</p>
-<p class="${value-cost>=0?'profit':'loss'}">${(value-cost).toFixed(2)}</p>
+<p class="${value-cost>=0?'profit':'loss'}">
+${(value-cost).toFixed(2)}
+</p>
 </div>`;
 });
 
-total.innerText="Total: $"+total.toFixed(2);
-profit.innerText="Profit: $"+profit.toFixed(2);
+// ADD EXCHANGE BALANCES
+data.balances?.forEach(b=>{
+total += b.usdValue;
 
-// portfolio chart
-const labels=data.trades.map(t=>t.coin);
-const values=data.trades.map(t=>t.amount*(data.prices[t.coin]||0));
+portfolio.innerHTML+=`
+<div class="card">
+<h3>${b.currency} (${b.platform})</h3>
+<p>$${b.usdValue.toFixed(2)}</p>
+</div>`;
+});
+
+document.getElementById("total").innerText="Total: $"+total.toFixed(2);
+document.getElementById("profit").innerText="Profit: $"+profit.toFixed(2);
+
+// CHART
+const labels=[];
+const values=[];
+
+data.balances?.forEach(b=>{
+labels.push(b.currency);
+values.push(b.usdValue);
+});
 
 if(chartInstance) chartInstance.destroy();
-chartInstance=new Chart(chart,{type:"doughnut",data:{labels,datasets:[{data:values}]}});
 
-// equity curve
-if(equityChart) equityChart.destroy();
-equityChart=new Chart(equityChartCanvas(),{
-type:"line",
-data:{labels,equityData}
-});
-
-// rewards
-detectRewards(data.transactions||[],data.prices);
-renderRewards(data.rewards||[],data.prices);
-
-}
-
-// helper for equity canvas
-function equityChartCanvas(){
-return document.getElementById("equityChart");
-}
-
-// reward detection
-async function detectRewards(tx,prices){
-const xrp=prices["XRP"]||1;
-
-for(const t of tx){
-if(t.type==="credit" && t.currency==="XRP"){
-if(!knownTx.has(t.id)){
-knownTx.add(t.id);
-
-await fetch("/reward",{method:"POST",
-headers:{'Content-Type':'application/json'},
-body:JSON.stringify({
-amount:t.amount,
-type:"gemini-auto",
-rewardUSD:t.amount*xrp,
-date:Date.now()
-})
-});
-}
-}
-}
-}
-
-// reward rendering
-function renderRewards(rewards,prices){
-let total=0;
-let monthly=0;
-let gasSpend=0;
-
-const now=new Date();
-const monthStart=new Date(now.getFullYear(),now.getMonth(),1);
-
-rewards.forEach(r=>{
-total+=r.rewardUSD;
-if(new Date(r.date)>monthStart){
-monthly+=r.rewardUSD;
-if(r.type==="gas") gasSpend+=r.amount;
-}
-});
-
-const xrp=prices["XRP"]||1;
-
-rewardStats.innerHTML=`
-<div class="card">
-<h3>Total: $${total.toFixed(2)}</h3>
-<h3>Monthly: $${monthly.toFixed(2)}</h3>
-<h3>XRP: ${(total/xrp).toFixed(2)}</h3>
-<p>Gas: $${gasSpend.toFixed(2)} / 300</p>
-</div>`;
-
-// reward chart
-const labels=rewards.map(r=>new Date(r.date).toLocaleDateString());
-const values=rewards.map(r=>r.rewardUSD);
-
-if(rewardChart) rewardChart.destroy();
-rewardChart=new Chart(document.getElementById("rewardChart"),{
-type:"line",
+chartInstance=new Chart(chart,{
+type:"doughnut",
 data:{labels,datasets:[{data:values}]}
 });
 }
 
-// actions
+// =====================
+// 💎 REWARDS SYSTEM
+// =====================
+function renderRewards(data){
+
+if(!document.getElementById("rewardsList")) return;
+
+let rewardsHTML="";
+let totalRewards=0;
+
+// MANUAL
+data.rewards.forEach(r=>{
+totalRewards+=r.amount;
+rewardsHTML+=`<p>${r.coin}: ${r.amount}</p>`;
+});
+
+// AUTO GEMINI XRP DETECTION
+data.transactions?.forEach(tx=>{
+if(tx.currency === "XRP" && tx.type === "Credit"){
+const amt=parseFloat(tx.amount||0);
+if(amt>0){
+totalRewards+=amt;
+
+rewardsHTML+=`
+<p>🔥 XRP Reward: ${amt.toFixed(4)}</p>
+`;
+}
+}
+});
+
+document.getElementById("rewardsList").innerHTML=rewardsHTML;
+document.getElementById("rewardTotal").innerText="Total Rewards: "+totalRewards.toFixed(4);
+
+// GAS TRACKING
+let gasSpend=0;
+data.transactions?.forEach(tx=>{
+if(tx.type==="Debit" && tx.description?.toLowerCase().includes("gas")){
+gasSpend+=parseFloat(tx.amount||0);
+}
+});
+
+let percent=(gasSpend/300)*100;
+document.getElementById("gasBar").style.width=Math.min(percent,100)+"%";
+}
+
+// =====================
+// 🧠 ELITE DASHBOARD
+// =====================
+function renderElite(data){
+
+// PLATFORM
+let platforms={};
+data.balances?.forEach(b=>{
+if(!platforms[b.platform]) platforms[b.platform]=0;
+platforms[b.platform]+=b.usdValue;
+});
+
+let html="<h4>Platforms</h4>";
+for(let p in platforms){
+html+=`<p>${p}: $${platforms[p].toFixed(2)}</p>`;
+}
+platformData.innerHTML=html;
+
+
+// DRAWDOWN
+let values=data.balances?.map(b=>b.usdValue)||[];
+let peak=Math.max(...values,0);
+let current=values.reduce((a,b)=>a+b,0);
+
+let drawdown=peak>0?((peak-current)/peak*100):0;
+
+riskData.innerHTML=`
+<h4>Risk</h4>
+<p>Drawdown: ${drawdown.toFixed(2)}%</p>
+`;
+
+
+// TRADE HISTORY
+let historyHTML="<h4>Trades</h4>";
+data.trades.forEach(t=>{
+const p=data.prices[t.coin]||0;
+const val=t.amount*p;
+const cost=t.amount*t.price;
+
+historyHTML+=`
+<p>${t.coin} $${cost.toFixed(2)} → $${val.toFixed(2)}</p>
+`;
+});
+tradeHistory.innerHTML=historyHTML;
+
+
+// TAX
+let cost=0,value=0;
+data.trades.forEach(t=>{
+cost+=t.amount*t.price;
+value+=t.amount*(data.prices[t.coin]||0);
+});
+
+taxData.innerHTML=`
+<h4>Tax</h4>
+<p>Cost: $${cost.toFixed(2)}</p>
+<p>Value: $${value.toFixed(2)}</p>
+<p>PnL: $${(value-cost).toFixed(2)}</p>
+`;
+
+
+// INSIGHTS
+let best=null,worst=null;
+
+data.trades.forEach(t=>{
+const pnl=(t.amount*(data.prices[t.coin]||0))-(t.amount*t.price);
+
+if(!best||pnl>best.pnl) best={coin:t.coin,pnl};
+if(!worst||pnl<worst.pnl) worst={coin:t.coin,pnl};
+});
+
+insightData.innerHTML=`
+<h4>Insights</h4>
+<p>Best: ${best?.coin||"-"} ($${best?.pnl?.toFixed(2)||0})</p>
+<p>Worst: ${worst?.coin||"-"} ($${worst?.pnl?.toFixed(2)||0})</p>
+`;
+}
+
+// =====================
+// ➕ ADD FUNCTIONS
+// =====================
 async function addTrade(){
-await fetch("/trade",{method:"POST",
+await fetch("/trade",{
+method:"POST",
 headers:{'Content-Type':'application/json'},
 body:JSON.stringify({
 coin:coin.value.toUpperCase(),
@@ -279,38 +243,29 @@ price:+price.value
 load();
 }
 
-async function addReward(){
-let percent=0.01;
-if(spendType.value==="gas") percent=0.04;
-if(spendType.value==="dining") percent=0.03;
-if(spendType.value==="groceries") percent=0.02;
-
-const rewardUSD=+spendAmount.value*percent;
-
-await fetch("/reward",{method:"POST",
+async function addStake(){
+await fetch("/stake",{
+method:"POST",
 headers:{'Content-Type':'application/json'},
 body:JSON.stringify({
-amount:+spendAmount.value,
-type:spendType.value,
-rewardUSD,
-date:Date.now()
+coin:stakeCoin.value,
+amount:+stakeAmount.value
 })
 });
-load();
 }
 
-function addAlert(){
-fetch("/alert",{method:"POST",
+async function addAlert(){
+await fetch("/alert",{
+method:"POST",
 headers:{'Content-Type':'application/json'},
-body:JSON.stringify({coin:alertCoin.value,price:+alertPrice.value})});
+body:JSON.stringify({
+coin:alertCoin.value,
+price:+alertPrice.value
+})
+});
 }
 
-function addStake(){
-fetch("/stake",{method:"POST",
-headers:{'Content-Type':'application/json'},
-body:JSON.stringify({coin:stakeCoin.value,amount:+stakeAmount.value})});
-}
-
+// AUTO REFRESH
 setInterval(load,5000);
 load();
 
