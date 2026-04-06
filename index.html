@@ -6,7 +6,93 @@
 
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/icon-192.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body { background:#000; color:white; font-family:-apple-system; }
+.card { background:#111; padding:12px; margin:10px; border-radius:10px; }
+.tabs { position:fixed; bottom:0; width:100%; display:flex; }
+.tabs button { flex:1; padding:10px; }
+.hidden { display:none; }
+.profit { color:lime; }
+.loss { color:red; }
+</style>
+</head>
+
+<body>
+
+<h1>999 Crypto 💀</h1>
+
+<!-- PORTFOLIO -->
+<div id="portfolioTab">
+<div class="card">
+<input id="coin" placeholder="Coin">
+<input id="amount" placeholder="Amount">
+<input id="price" placeholder="Buy Price">
+<button onclick="addTrade()">Add Trade</button>
+</div>
+
+<div id="portfolio"></div>
+<h2 id="total"></h2>
+<h3 id="profit"></h3>
+</div>
+
+<!-- ANALYTICS -->
+<div id="analyticsTab" class="hidden">
+<canvas id="chart"></canvas>
+</div>
+
+<!-- REWARDS -->
+<div id="rewardsTab" class="hidden">
+<div class="card">
+<h3>Rewards</h3>
+<div id="rewardsList"></div>
+<p id="rewardTotal"></p>
+<div style="background:#222;height:10px;">
+<div id="gasBar" style="background:purple;height:10px;width:0%"></div>
+</div>
+</div>
+</div>
+
+<!-- ELITE -->
+<div id="eliteTab" class="hidden">
+<div class="card">
+<div id="platformData"></div>
+<div id="riskData"></div>
+<div id="tradeHistory"></div>
+<div id="taxData"></div>
+<div id="insightData"></div>
+</div>
+</div>
+
+<!-- ALERTS -->
+<div id="alertsTab" class="hidden">
+<div class="card">
+<input id="alertCoin">
+<input id="alertPrice">
+<button onclick="addAlert()">Alert</button>
+</div>
+</div>
+
+<!-- STAKING -->
+<div id="stakingTab" class="hidden">
+<div class="card">
+<input id="stakeCoin">
+<input id="stakeAmount">
+<button onclick="addStake()">Stake</button>
+</div>
+</div>
+
+<!-- NAV -->
+<div class="tabs">
+<button onclick="tab('portfolioTab')">💰</button>
+<button onclick="tab('analyticsTab')">📊</button>
+<button onclick="tab('rewardsTab')">💎</button>
+<button onclick="tab('eliteTab')">🧠</button>
+<button onclick="tab('alertsTab')">🔔</button>
+<button onclick="tab('stakingTab')">🏦</button>
+</div>
 
 <script>
 
@@ -267,8 +353,9 @@ price:+alertPrice.value
 
 // AUTO REFRESH
 setInterval(load,5000);
-load();
+
 
 </script>
+
 </body>
 </html>
