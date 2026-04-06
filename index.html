@@ -95,13 +95,17 @@ margin-top:6px;
 <button class="menu-btn" onclick="toggleMenu()">☰</button>
 
 <div id="menu" class="menu">
-<button onclick="tab('portfolioTab')">💰 Portfolio</button>
-<button onclick="tab('rewardsTab')">💎 Rewards</button>
-<button onclick="tab('eliteTab')">🧠 Elite</button>
-<button onclick="tab('alertsTab')">🔔 Alerts</button>
-<button onclick="tab('stakingTab')">🏦 Staking</button>
-<button onclick="tab('aiTab')">🤖 AI</button>
-<button onclick="tab('liveTab')">📡 Live</button>
+<<div id="menu" class="menu">
+
+<button onclick="openTab('portfolioTab')">💰 Portfolio</button>
+<button onclick="openTab('analyticsTab')">📊 Analytics</button>
+<button onclick="openTab('rewardsTab')">💎 Rewards</button>
+<button onclick="openTab('eliteTab')">🧠 Elite</button>
+<button onclick="openTab('alertsTab')">🔔 Alerts</button>
+<button onclick="openTab('stakingTab')">🏦 Staking</button>
+<button onclick="openTab('aiTab')">🤖 AI</button>
+<button onclick="openTab('liveTab')">📡 Live</button>
+
 </div>
 
 <!-- PORTFOLIO -->
@@ -365,7 +369,45 @@ livePrices.innerHTML=`$${LIVE_PRICES.XRP.toFixed(2)}`;
 // LOAD LOOP
 setInterval(load,5000);
 load();
+function openTab(id){
+  if(id === currentTab) return;
 
+  const tabs = [
+    "portfolioTab",
+    "analyticsTab",
+    "rewardsTab",
+    "eliteTab",
+    "alertsTab",
+    "stakingTab",
+    "aiTab",
+    "liveTab"
+  ];
+
+  const current = document.getElementById(currentTab);
+  const next = document.getElementById(id);
+
+  const dir = tabs.indexOf(id) > tabs.indexOf(currentTab) ? -100 : 100;
+
+  next.style.transform = `translateX(${dir}%)`;
+  next.classList.remove("hidden");
+
+  setTimeout(()=>{
+    next.style.transition = "all .3s ease";
+    next.style.transform = "translateX(0)";
+    current.style.transform = `translateX(${dir*-1}%)`;
+  },10);
+
+  setTimeout(()=>{
+    current.classList.add("hidden");
+    current.style.transform = "";
+    next.style.transition = "";
+    currentTab = id;
+  },300);
+
+  toggleMenu();
+}
+  
 </script>
+  
 </body>
 </html>
