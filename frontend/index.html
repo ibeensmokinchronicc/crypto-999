@@ -5,7 +5,10 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#9333ea">
+
   <link rel="manifest" href="/manifest.json">
+  <link rel="icon" href="/icon-192.png">
+  <link rel="apple-touch-icon" href="/icon-512.png">
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -26,31 +29,42 @@
       z-index: -1;
     }
 
+    #splash {
+      position: fixed;
+      width: 100%;
+      height: 100%;
+      background: black;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      animation: fadeOut 2.5s forwards;
+      animation-delay: 2s;
+    }
+
+    #logo {
+      width: 160px;
+      animation: glow 2s infinite alternate, zoom 1.5s ease;
+    }
+
+    @keyframes glow {
+      from { filter: drop-shadow(0 0 10px #9333ea); }
+      to { filter: drop-shadow(0 0 40px #9333ea); }
+    }
+
+    @keyframes zoom {
+      from { transform: scale(0.7); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    @keyframes fadeOut {
+      to { opacity: 0; visibility: hidden; }
+    }
+
     h1 {
       color: #b026ff;
       text-shadow: 0 0 20px #9333ea, 0 0 40px #6b21a8;
-      letter-spacing: 2px;
     }
-
-    .tabs {
-      position: fixed;
-      bottom: 0;
-      width: 100%;
-      background: rgba(10,10,10,0.9);
-      border-top: 1px solid #9333ea;
-      display: flex;
-      justify-content: space-around;
-      padding: 12px;
-    }
-
-    .tabs button {
-      background: none;
-      border: none;
-      color: #c084fc;
-      font-size: 18px;
-    }
-
-    .hidden { display: none; }
 
     .card {
       background: rgba(20,20,20,0.85);
@@ -60,13 +74,6 @@
       border-radius: 14px;
       border: 1px solid rgba(147,51,234,0.3);
       box-shadow: 0 0 15px rgba(147,51,234,0.4);
-      backdrop-filter: blur(10px);
-      transition: 0.2s;
-    }
-
-    .card:hover {
-      transform: scale(1.03);
-      box-shadow: 0 0 30px #9333ea;
     }
 
     input {
@@ -84,25 +91,34 @@
       border: none;
       background: linear-gradient(135deg, #9333ea, #6b21a8);
       color: white;
-      box-shadow: 0 0 10px #9333ea;
     }
 
-    #total {
-      color: #22c55e;
-      font-size: 22px;
-      text-shadow: 0 0 10px #22c55e;
-      margin-bottom: 80px;
+    .tabs {
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      background: rgba(10,10,10,0.9);
+      border-top: 1px solid #9333ea;
+      display: flex;
+      justify-content: space-around;
+      padding: 12px;
     }
+
+    .hidden { display: none; }
   </style>
 </head>
 
 <body>
 
+<!-- SPLASH -->
+<div id="splash">
+  <img src="/icon-512.png" id="logo">
+</div>
+
 <canvas id="bg"></canvas>
 
 <h1>999 Crypto App</h1>
 
-<!-- PORTFOLIO -->
 <div id="portfolioTab">
 
   <input id="coinName" placeholder="Coin">
@@ -113,173 +129,87 @@
   <canvas id="chart"></canvas>
 
   <div id="portfolio"></div>
-
-  <h2 id="total">Total: $0</h2>
+  <h2 id="total"></h2>
   <h3 id="profitTotal"></h3>
 
-  <h3>Alerts</h3>
-  <input id="alertCoin" placeholder="BTC">
-  <input id="alertPrice" placeholder="Price">
-  <button onclick="addAlert()">Set</button>
-
 </div>
 
-<!-- REWARDS -->
-<div id="rewardsTab" class="hidden">
-
-  <h2>💳 Rewards</h2>
-
-  <input id="gas" placeholder="Gas">
-  <input id="dining" placeholder="Dining">
-  <input id="groceries" placeholder="Groceries">
-  <input id="other" placeholder="Other">
-
-  <br><br>
-
-  <button onclick="addTransaction()">Add</button>
-  <button onclick="resetMonth()">Reset</button>
-
-  <div id="alerts"></div>
-
-  <canvas id="rewardsChart"></canvas>
-
-  <div id="rewardsResult" class="card"></div>
-
-</div>
-
-<!-- NAV -->
 <div class="tabs">
   <button onclick="showTab('portfolio')">Portfolio</button>
-  <button onclick="showTab('rewards')">Rewards</button>
 </div>
 
 <script>
 
-// PARTICLES BACKGROUND
+// PARTICLES
 const canvas = document.getElementById("bg");
 const ctx = canvas.getContext("2d");
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-let particles = [];
+let particles = Array.from({length:50},()=>({
+  x:Math.random()*canvas.width,
+  y:Math.random()*canvas.height,
+  r:Math.random()*2,
+  d:Math.random()*1
+}));
 
-for (let i = 0; i < 60; i++) {
-  particles.push({
-    x: Math.random() * canvas.width,
-    y: Math.random() * canvas.height,
-    r: Math.random() * 2,
-    d: Math.random() * 1
-  });
-}
-
-function drawParticles() {
+function drawParticles(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
-
-  ctx.fillStyle = "rgba(147,51,234,0.6)";
-
-  particles.forEach(p => {
+  ctx.fillStyle="rgba(147,51,234,0.6)";
+  particles.forEach(p=>{
     ctx.beginPath();
     ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
     ctx.fill();
-
-    p.y += p.d;
-    if (p.y > canvas.height) p.y = 0;
+    p.y+=p.d;
+    if(p.y>canvas.height)p.y=0;
   });
-
   requestAnimationFrame(drawParticles);
 }
-
 drawParticles();
-
-// NAV
-function showTab(tab) {
-  portfolioTab.classList.add("hidden");
-  rewardsTab.classList.add("hidden");
-  if (tab === "portfolio") portfolioTab.classList.remove("hidden");
-  else rewardsTab.classList.remove("hidden");
-}
 
 // STORAGE
 let coins = JSON.parse(localStorage.getItem("coins")) || [];
-let alertsList = JSON.parse(localStorage.getItem("alerts")) || [];
-let transactions = JSON.parse(localStorage.getItem("tx")) || [];
 
-function save() {
-  localStorage.setItem("coins", JSON.stringify(coins));
-  localStorage.setItem("alerts", JSON.stringify(alertsList));
-  localStorage.setItem("tx", JSON.stringify(transactions));
+function save(){
+  localStorage.setItem("coins",JSON.stringify(coins));
 }
 
 // ADD COIN
-function addManual() {
+function addManual(){
   coins.push({
-    currency: coinName.value.toUpperCase(),
-    amount: +coinAmount.value,
-    cost: +coinCost.value
+    currency:coinName.value.toUpperCase(),
+    amount:+coinAmount.value,
+    cost:+coinCost.value
   });
   save();
   loadData();
 }
 
-// ALERTS
-function addAlert() {
-  alertsList.push({
-    coin: alertCoin.value.toUpperCase(),
-    price: +alertPrice.value,
-    triggered: false
-  });
-  save();
-}
-
-function notify(msg) {
-  if (Notification.permission === "granted") {
-    new Notification(msg);
-  }
-}
-
-Notification.requestPermission();
-
-// LOAD DATA
+// LOAD
 let chart;
 
-async function loadData() {
+async function loadData(){
   const res = await fetch("/sync");
   const data = await res.json();
 
-  let total = 0;
-  let profitTotal = 0;
+  let total=0, profitTotal=0;
+  let labels=[], values=[];
 
-  let labels = [];
-  let values = [];
+  portfolio.innerHTML="";
 
-  portfolio.innerHTML = "";
+  coins.forEach(c=>{
+    const price = data.prices[c.currency]||0;
+    const val = c.amount*price;
+    const profit = val-(c.amount*c.cost);
 
-  data.balances.forEach(c => {
-    total += c.usdValue || 0;
-    labels.push(c.currency);
-    values.push(c.usdValue || 0);
-
-    portfolio.innerHTML += `
-      <div class="card">
-        <h3>${c.currency}</h3>
-        <p>$${(c.usdValue||0).toFixed(2)}</p>
-      </div>
-    `;
-  });
-
-  coins.forEach(c => {
-    const price = data.prices[c.currency] || 0;
-    const val = c.amount * price;
-    const profit = val - (c.amount * c.cost);
-
-    total += val;
-    profitTotal += profit;
+    total+=val;
+    profitTotal+=profit;
 
     labels.push(c.currency);
     values.push(val);
 
-    portfolio.innerHTML += `
+    portfolio.innerHTML+=`
       <div class="card">
         <h3>${c.currency}</h3>
         <p>$${val.toFixed(2)}</p>
@@ -290,69 +220,24 @@ async function loadData() {
     `;
   });
 
-  totalEl.innerText = "Total: $" + total.toFixed(2);
-  profitTotal.innerText = "Profit: $" + profitTotal.toFixed(2);
+  total.innerText="Total: $"+total.toFixed(2);
+  profitTotal.innerText="Profit: $"+profitTotal.toFixed(2);
 
-  alertsList.forEach(a => {
-    if (!a.triggered && data.prices[a.coin] >= a.price) {
-      notify(`${a.coin} hit $${a.price}`);
-      a.triggered = true;
-      save();
-    }
-  });
-
-  if (chart) chart.destroy();
-
-  chart = new Chart(document.getElementById("chart"), {
-    type: "doughnut",
-    data: { labels, datasets: [{ data: values }] }
-  });
-}
-
-// REWARDS
-function addTransaction() {
-  transactions.push({
-    gas:+gas.value||0,
-    dining:+dining.value||0,
-    groceries:+groceries.value||0,
-    other:+other.value||0
-  });
-  save();
-  loadRewards();
-}
-
-function resetMonth() {
-  transactions=[];
-  save();
-  loadRewards();
-}
-
-async function loadRewards() {
-  let g=0,d=0,gr=0,o=0;
-
-  transactions.forEach(t=>{
-    g+=t.gas; d+=t.dining; gr+=t.groceries; o+=t.other;
-  });
-
-  const reward = (Math.min(g,300)*0.04)+(Math.max(g-300,0)*0.01)+d*0.03+gr*0.02+o*0.01;
-
-  const res = await fetch("/sync");
-  const data = await res.json();
-
-  const xrp = reward/(data.prices.XRP||1);
-
-  rewardsResult.innerHTML = `
-    <p>Total Cashback: $${reward.toFixed(2)}</p>
-    <p>XRP Earned: ${xrp.toFixed(2)}</p>
-  `;
+  if(chart) chart.destroy();
+  chart = new Chart(chartCanvas,{type:"doughnut",data:{labels,datasets:[{data:values}]}})
 }
 
 // INIT
 loadData();
-loadRewards();
 setInterval(loadData,5000);
 
-if ("serviceWorker" in navigator) {
+// SPLASH REMOVE
+window.onload=()=>setTimeout(()=>{
+  splash.style.display="none";
+},3000);
+
+// SW
+if("serviceWorker" in navigator){
   navigator.serviceWorker.register("/service-worker.js");
 }
 
