@@ -211,7 +211,79 @@ requestAnimationFrame(drawParticles);
 }
 
 drawParticles();
+// =====================
+// 🔔 NOTIFICATIONS SYSTEM (SAFE ADD)
+// =====================
+async function enableNotifications(){
+if(!("Notification" in window)) return;
 
+const permission = await Notification.requestPermission();
+
+if(permission === "granted"){
+new Notification("999 Crypto 💀", {
+body:"Notifications Enabled",
+icon:"/icon-192.png"
+});
+}
+}
+
+function sendNotification(title, body){
+if(Notification.permission === "granted"){
+new Notification(title, {
+body,
+icon:"/icon-192.png"
+});
+}
+}
+// =====================
+// 🔔 SMART ALERT + REWARD SYSTEM (NO SPAM)
+// =====================
+
+// store seen rewards
+let seenRewards = JSON.parse(localStorage.getItem("seenRewards") || "[]");
+
+setInterval(async () => {
+try{
+const res = await fetch("/sync");
+const data = await res.json();
+
+// PRICE ALERTS
+data.alerts?.forEach(a=>{
+const price = data.prices[a.coin] || 0;
+
+if(price >= a.price){
+sendNotification("🚨 Price Alert", `${a.coin} hit $${a.price}`);
+}
+});
+
+// XRP REWARDS (SMART)
+data.transactions?.forEach(tx=>{
+if(tx.currency==="XRP" && tx.type==="Credit"){
+
+const id = tx.timestamp || tx.txid || tx.amount + tx.date;
+
+// if not seen before
+if(!seenRewards.includes(id)){
+seenRewards.push(id);
+
+// save memory
+localStorage.setItem("seenRewards", JSON.stringify(seenRewards));
+
+// notify once
+sendNotification("💎 XRP Reward", `+${tx.amount} XRP received`);
+}
+
+}
+});
+
+}catch(e){
+console.log("alert system error");
+}
+}, 7000);
+
+  if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/service-worker.js");
+}
 </script>
 
 </body>
