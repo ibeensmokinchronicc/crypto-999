@@ -11,38 +11,35 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 
-// ===== DB =====
 const db = new Low(new JSONFile("db.json"), {
   trades: [],
   history: [],
-  rewards: [],
   alerts: [],
-  staking: []
+  staking: [],
+  rewards: []
 });
 
 await db.read();
 
-// ===== ENV =====
 const CB_KEY = process.env.COINBASE_API_KEY;
 const GEM_KEY = process.env.GEMINI_API_KEY;
 const GEM_SECRET = process.env.GEMINI_API_SECRET;
 
-// ===== PRICES =====
+// PRICE ENGINE
 async function getPrices() {
   const r = await fetch("https://api.coinbase.com/v2/exchange-rates?currency=USD");
   const d = await r.json();
   const rates = d.data.rates;
 
-  return {
-    BTC: 1 / rates.BTC,
-    ETH: 1 / rates.ETH,
-    XRP: 1 / rates.XRP,
-    SOL: 1 / rates.SOL || 0,
-    ADA: 1 / rates.ADA || 0
-  };
+  const map = {};
+  Object.keys(rates).forEach(c => {
+    map[c] = 1 / rates[c];
+  });
+
+  return map;
 }
 
-// ===== GEMINI =====
+// GEMINI
 async function getGeminiBalances() {
   try {
     const payload = {
@@ -81,7 +78,7 @@ async function getGeminiBalances() {
   }
 }
 
-// ===== COINBASE =====
+// COINBASE
 async function getCoinbaseBalances() {
   try {
     const res = await fetch("https://api.coinbase.com/v2/accounts", {
@@ -103,7 +100,7 @@ async function getCoinbaseBalances() {
   }
 }
 
-// ===== SYNC =====
+// SYNC
 app.get("/sync", async (req, res) => {
   const prices = await getPrices();
 
@@ -115,49 +112,42 @@ app.get("/sync", async (req, res) => {
     usdValue: b.amount * (prices[b.currency] || 0)
   }));
 
-  // XRP rewards logic (monthly reset)
-  const rewards = balances
-    .filter(b => b.currency === "XRP" && b.platform === "gemini")
-    .map(b => ({
-      amount: b.amount,
-      month: new Date().getMonth()
-    }));
-
   res.json({
     balances,
     prices,
     trades: db.data.trades,
     history: db.data.history,
-    rewards,
     alerts: db.data.alerts,
-    staking: db.data.staking
+    staking: db.data.staking,
+    rewards: db.data.rewards
   });
 });
 
-// ===== SAVE TRADE =====
+// SAVE ROUTES
 app.post("/trade", async (req, res) => {
   db.data.trades.push(req.body);
   await db.write();
   res.json({ ok: true });
 });
 
-// ===== STAKING =====
-app.post("/stake", async (req, res) => {
-  db.data.staking.push(req.body);
-  await db.write();
-  res.json({ ok: true });
-});
-
-// ===== ALERTS =====
 app.post("/alert", async (req, res) => {
   db.data.alerts.push(req.body);
   await db.write();
   res.json({ ok: true });
 });
 
-// ===== SERVE FRONTEND =====
+app.post("/stake", async (req, res) => {
+  db.data.staking.push(req.body);
+  await db.write();
+  res.json({ ok: true });
+});
+
+app.post("/reward", async (req, res) => {
+  db.data.rewards.push(req.body);
+  await db.write();
+  res.json({ ok: true });
+});
+
 app.use(express.static("."));
 
-app.listen(PORT, () => {
-  console.log("💀 FINAL BOSS SYSTEM RUNNING");
-});
+app.listen(PORT, () => console.log("💀 ULTRA SYSTEM LIVE"));
