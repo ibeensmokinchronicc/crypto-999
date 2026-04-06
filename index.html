@@ -165,8 +165,14 @@ button {
   
 <div id="aiTab" class="hidden">
   <div class="card">
-    <h3>🧠 AI Insights</h3>
+    <h3>🤖 AI Insights</h3>
     <div id="aiBox"></div>
+  </div>
+  
+<div id="liveTab" class="hidden">
+  <div class="card">
+    <h3>📡 Live Market</h3>
+    <div id="livePrices"></div>
   </div>
 </div>
 
@@ -177,7 +183,8 @@ button {
 <button onclick="tab('eliteTab')">🧠</button>
 <button onclick="tab('alertsTab')">🔔</button>
 <button onclick="tab('stakingTab')">🏦</button>
-<button onclick="tab('aiTab')">🧠</button>
+<button onclick="tab('aiTab')">🤖</button>
+<button onclick="tab('liveTab')">📡</button>
 </div>
 
 <script>
@@ -366,6 +373,62 @@ if (GLOBAL_DATA && GLOBAL_DATA.trades) {
 runAI(GLOBAL_DATA);
 }
 }, 5000);
+
+  // =====================
+// 📡 LIVE MARKET STREAM
+// =====================
+let LIVE_PRICES = {};
+
+async function startLivePrices(){
+
+setInterval(async ()=>{
+
+try{
+const res = await fetch("https://api.coinbase.com/v2/exchange-rates?currency=USD");
+const data = await res.json();
+const rates = data.data.rates;
+
+// convert to USD price
+const coins = ["BTC","ETH","XRP","SOL","DOGE"];
+
+coins.forEach(c=>{
+if(rates[c]){
+LIVE_PRICES[c] = 1 / rates[c];
+}
+});
+
+renderLivePrices();
+
+}catch(e){
+console.log("live price error");
+}
+
+}, 2500);
+}
+
+// =====================
+// 🎨 RENDER LIVE PRICES
+// =====================
+function renderLivePrices(){
+
+if(!document.getElementById("livePrices")) return;
+
+let html="";
+
+Object.keys(LIVE_PRICES).forEach(c=>{
+html+=`
+<div class="card">
+<h3>${c}</h3>
+<p>$${LIVE_PRICES[c].toFixed(2)}</p>
+</div>
+`;
+});
+
+document.getElementById("livePrices").innerHTML = html;
+}
+
+// START STREAM
+startLivePrices();
 </script>
 
 </body>
