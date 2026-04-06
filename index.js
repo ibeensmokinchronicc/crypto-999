@@ -25,7 +25,7 @@ const CB_KEY = process.env.COINBASE_API_KEY;
 const GEM_KEY = process.env.GEMINI_API_KEY;
 const GEM_SECRET = process.env.GEMINI_API_SECRET;
 
-// PRICE ENGINE
+// ===== PRICE ENGINE =====
 async function getPrices() {
   const r = await fetch("https://api.coinbase.com/v2/exchange-rates?currency=USD");
   const d = await r.json();
@@ -39,7 +39,7 @@ async function getPrices() {
   return map;
 }
 
-// GEMINI
+// ===== GEMINI =====
 async function getGeminiBalances() {
   try {
     const payload = {
@@ -78,7 +78,7 @@ async function getGeminiBalances() {
   }
 }
 
-// COINBASE
+// ===== COINBASE =====
 async function getCoinbaseBalances() {
   try {
     const res = await fetch("https://api.coinbase.com/v2/accounts", {
@@ -100,7 +100,7 @@ async function getCoinbaseBalances() {
   }
 }
 
-// SYNC
+// ===== SYNC =====
 app.get("/sync", async (req, res) => {
   const prices = await getPrices();
 
@@ -123,7 +123,7 @@ app.get("/sync", async (req, res) => {
   });
 });
 
-// SAVE ROUTES
+// ===== SAVE ROUTES =====
 app.post("/trade", async (req, res) => {
   db.data.trades.push(req.body);
   await db.write();
@@ -148,6 +148,13 @@ app.post("/reward", async (req, res) => {
   res.json({ ok: true });
 });
 
+// ===== STATIC FILES =====
 app.use(express.static("."));
 
+// ✅ FIX: FORCE LOAD INDEX.HTML
+app.get("/", (req, res) => {
+  res.sendFile(process.cwd() + "/index.html");
+});
+
+// ===== START SERVER =====
 app.listen(PORT, () => console.log("💀 ULTRA SYSTEM LIVE"));
