@@ -198,24 +198,57 @@ margin-top:6px;
 
 // MENU
 function toggleMenu(){
-menu.classList.toggle("show");
+  const menu = document.getElementById("menu");
+  menu.classList.toggle("show");
 }
-
-// TAB
-function tab(id){
-["portfolioTab","rewardsTab","eliteTab","alertsTab","stakingTab","aiTab","liveTab"]
-.forEach(t=>document.getElementById(t).classList.add("hidden"));
-
-document.getElementById(id).classList.remove("hidden");
-menu.classList.remove("show");
 }
-
 // GLOBAL
 let GLOBAL_DATA={};
 let LIVE_PRICES={};
 let rewardHistory = JSON.parse(localStorage.getItem("rewardHistory")||"{}");
 let monthlyData = JSON.parse(localStorage.getItem("monthlyData")||"{}");
+let currentTab = "portfolioTab";
 
+function openTab(id){
+
+  if(id === currentTab) return;
+
+  if(navigator.vibrate) navigator.vibrate(10);
+
+  const tabs = [
+    "portfolioTab",
+    "analyticsTab",
+    "rewardsTab",
+    "eliteTab",
+    "alertsTab",
+    "stakingTab",
+    "aiTab",
+    "liveTab"
+  ];
+
+  const current = document.getElementById(currentTab);
+  const next = document.getElementById(id);
+
+  const dir = tabs.indexOf(id) > tabs.indexOf(currentTab) ? -100 : 100;
+
+  next.style.transform = `translateX(${dir}%)`;
+  next.classList.remove("hidden");
+
+  setTimeout(()=>{
+    next.style.transition = "all .3s ease";
+    next.style.transform = "translateX(0)";
+    current.style.transform = `translateX(${dir*-1}%)`;
+  },10);
+
+  setTimeout(()=>{
+    current.classList.add("hidden");
+    current.style.transform = "";
+    next.style.transition = "";
+    currentTab = id;
+  },300);
+
+  toggleMenu();
+}
 // LOAD
 async function load(){
 try{
@@ -406,7 +439,31 @@ function openTab(id){
 
   toggleMenu();
 }
-  
+  let startX = 0;
+
+document.addEventListener("touchstart", e=>{
+  startX = e.changedTouches[0].screenX;
+});
+
+document.addEventListener("touchend", e=>{
+  const diff = e.changedTouches[0].screenX - startX;
+
+  const tabs = [
+    "portfolioTab",
+    "analyticsTab",
+    "rewardsTab",
+    "eliteTab",
+    "alertsTab",
+    "stakingTab",
+    "aiTab",
+    "liveTab"
+  ];
+
+  let i = tabs.indexOf(currentTab);
+
+  if(diff > 60 && i > 0) openTab(tabs[i-1]);
+  if(diff < -60 && i < tabs.length-1) openTab(tabs[i+1]);
+});
 </script>
   
 </body>
