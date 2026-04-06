@@ -65,7 +65,7 @@ button {
   background:linear-gradient(135deg,#9333ea,#6b21a8);
   color:white;
 }
-
+  
 /* NAV */
 .tabs {
   position:fixed;
@@ -162,6 +162,12 @@ button {
 <input id="stakeAmount" placeholder="Amount">
 <button onclick="addStake()">Add Stake</button>
 </div>
+  
+<div id="aiTab" class="hidden">
+  <div class="card">
+    <h3>🧠 AI Insights</h3>
+    <div id="aiBox"></div>
+  </div>
 </div>
 
 <div class="tabs">
@@ -171,6 +177,7 @@ button {
 <button onclick="tab('eliteTab')">🧠</button>
 <button onclick="tab('alertsTab')">🔔</button>
 <button onclick="tab('stakingTab')">🏦</button>
+<button onclick="tab('aiTab')">🧠</button>
 </div>
 
 <script>
@@ -284,6 +291,81 @@ console.log("alert system error");
   if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/service-worker.js");
 }
+
+  // =====================
+// 🧠 AI PORTFOLIO OPTIMIZER
+// =====================
+function runAI(data){
+
+if(!document.getElementById("aiBox")) return;
+
+let suggestions=[];
+
+// CALCULATE POSITIONS
+let positions={};
+
+data.trades.forEach(t=>{
+const val = t.amount * (data.prices[t.coin] || 0);
+positions[t.coin] = (positions[t.coin] || 0) + val;
+});
+
+// TOTAL VALUE
+const total = Object.values(positions).reduce((a,b)=>a+b,0);
+
+// ANALYZE
+let best=null, worst=null;
+
+for(let coin in positions){
+
+const val = positions[coin];
+const percent = (val/total)*100;
+
+// OVEREXPOSED
+if(percent > 50){
+suggestions.push(`⚠️ ${coin} is ${percent.toFixed(1)}% of portfolio`);
+}
+
+// LOW POSITION
+if(percent < 5){
+suggestions.push(`📉 ${coin} is under 5% (low exposure)`);
+}
+
+// TRACK BEST/WORST
+const trade = data.trades.find(t=>t.coin===coin);
+if(trade){
+const pnl = (trade.amount*(data.prices[coin]||0))-(trade.amount*trade.price);
+
+if(!best || pnl > best.pnl) best={coin,pnl};
+if(!worst || pnl < worst.pnl) worst={coin,pnl};
+}
+
+}
+
+// FINAL INSIGHTS
+if(best) suggestions.push(`🔥 Best: ${best.coin} (+$${best.pnl.toFixed(2)})`);
+if(worst) suggestions.push(`💀 Worst: ${worst.coin} ($${worst.pnl.toFixed(2)})`);
+
+// RISK WARNING
+if(total > 0){
+const largest = Math.max(...Object.values(positions));
+if((largest/total)*100 > 60){
+suggestions.push("🚨 High concentration risk");
+}
+}
+
+// RENDER
+document.getElementById("aiBox").innerHTML = suggestions.map(s=>`<p>${s}</p>`).join("");
+
+}
+
+  // =====================
+// 🧠 AUTO RUN AI (NO load() NEEDED)
+// =====================
+setInterval(() => {
+if (GLOBAL_DATA && GLOBAL_DATA.trades) {
+runAI(GLOBAL_DATA);
+}
+}, 5000);
 </script>
 
 </body>
